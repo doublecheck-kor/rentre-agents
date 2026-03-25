@@ -18,3 +18,7 @@ node_modules/
 # Env
 .env
 .env.*
+
+# 개인 설정 (install.sh로 생성되는 파일)
+rentre-config.json
+CLAUDE.md

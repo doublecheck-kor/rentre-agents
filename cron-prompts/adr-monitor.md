@@ -8,8 +8,8 @@ ADR 모니터링 에이전트 역할을 수행하세요. 여러 에이전트의 
 - 각 ADR 페이지의 댓글 확인: mcp__claude_ai_Notion__notion-get-comments (page_id, include_all_blocks: true)
 
 ### 2단계: 나를 멘션하는 댓글 감지
-- Stephen의 Notion user ID: 121d872b-594c-81ce-bec2-00027566bb0d
-- 댓글에서 이 user ID가 멘션되어 있거나, "stephen", "재우", "정재우" 키워드가 포함된 댓글 찾기
+- Notion user ID: {{NOTION_USER_ID}}
+- 댓글에서 이 user ID가 멘션되어 있거나, 사용자 이름 키워드가 포함된 댓글 찾기
 - 이미 이전에 보고한 댓글은 건너뛰기 (같은 내용 중복 방지)
 
 ### 3단계: ADR 문서 분석 (다중 에이전트 관점)
@@ -22,7 +22,7 @@ ADR 모니터링 에이전트 역할을 수행하세요. 여러 에이전트의 
 - Agile Coach 관점: 팀 간 의존성, 스프린트 영향
 
 ### 4단계: Slack DM으로 요약 전송
-- channel_id: U07SAAR4B60
+- channel_id: {{SLACK_USER_ID}}
 - mcp__claude_ai_Slack__slack_send_message 사용 (드래프트 아님, 직접 전송)
 
 ### 주의사항

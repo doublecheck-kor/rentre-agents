@@ -3,16 +3,16 @@
 이 파일은 AI 에이전트가 노션 백로그를 생성할 때 참조하는 공유 규칙입니다.
 Agile Coach(`/rentre:agile`)가 이 규칙의 관리자(게이트키퍼)입니다.
 
-> 원본 가이드: 노션 "백로그 활용 가이드" (https://www.notion.so/13848a033208801483c1e9eab1d4af28)
+> 원본 가이드: 노션 "백로그 활용 가이드" ({{NOTION_BACKLOG_GUIDE_URL}})
 
 ---
 
 ## 1. 노션 백로그 DB 정보
 
 ### API 호출 정보
-- **data_source_id**: `f7a3fc56-6ec9-4620-a6f9-e70586a94cc0`
+- **data_source_id**: `{{NOTION_BACKLOG_DATASOURCE}}`
 - **MCP Tool**: `mcp__claude_ai_Notion__notion-create-pages`
-- **parent**: `{"data_source_id": "f7a3fc56-6ec9-4620-a6f9-e70586a94cc0"}`
+- **parent**: `{"data_source_id": "{{NOTION_BACKLOG_DATASOURCE}}"}`
 
 ### 필수 프로퍼티 (모든 일감)
 | 프로퍼티 | 타입 | 필수 | 설명 |

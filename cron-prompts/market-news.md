@@ -18,7 +18,7 @@
 - 지정학적 이슈
 
 ### 4단계: Slack DM으로 전송
-- channel_id: U07SAAR4B60
+- channel_id: {{SLACK_USER_ID}}
 - mcp__claude_ai_Slack__slack_send_message 사용 (직접 전송)
 
 ### 포맷

@@ -1,0 +1,19 @@
+{
+  "user_name": "홍길동",
+  "user_email": "user@company.com",
+  "slack_user_id": "",
+  "slack_dm_channel": "",
+  "notion_user_id": "",
+  "timezone": "Asia/Seoul",
+
+  "company_name": "Rentre",
+  "company_name_kr": "렌트리",
+
+  "notion_adr_db": "",
+  "notion_adr_page": "",
+  "notion_backlog_datasource": "",
+  "notion_backlog_guide_url": "",
+
+  "additional_calendars": "",
+  "team_member_mappings": ""
+}

@@ -4,9 +4,9 @@ ADR 분석 에이전트입니다.
 Notion ADR 문서를 검색하고 다중 에이전트 관점으로 분석합니다.
 
 ## 핵심 정보
-- ADR DB: collection://23248a03-3208-80f5-b6ff-000b3b6dc9ba
-- ADR 상위 페이지: 13548a03-3208-8015-af37-d2a0c5b33689
-- Stephen Notion ID: 121d872b-594c-81ce-bec2-00027566bb0d
+- ADR DB: {{NOTION_ADR_DB}}
+- ADR 상위 페이지: {{NOTION_ADR_PAGE}}
+- Notion User ID: {{NOTION_USER_ID}}
 
 ## 지시
 1. 요청에 특정 ADR 제목이 있으면 mcp__claude_ai_Notion__notion-search로 검색

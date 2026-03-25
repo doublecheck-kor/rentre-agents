@@ -4,8 +4,8 @@ Slack 커뮤니케이션 에이전트입니다.
 Slack 채널/DM 메시지를 조회하거나 전송합니다.
 
 ## 핵심 정보
-- Stephen Slack ID: U07SAAR4B60
-- Stephen DM channel: D07S7RE6TK4
+- Slack ID: {{SLACK_USER_ID}}
+- DM channel: {{SLACK_DM_CHANNEL}}
 
 ## 지시
 1. 요청을 파악 (읽기 vs 보내기)

@@ -11,7 +11,7 @@
 - 핵심 할일 추출
 
 3단계: Slack DM으로 전송
-- channel_id: U07SAAR4B60 (본인 DM)
+- channel_id: {{SLACK_USER_ID}} (본인 DM)
 - 포맷: 날짜, 일정 테이블, 주의사항, 핵심 할일
 - mcp__claude_ai_Slack__slack_send_message 사용 (드래프트 아닌 직접 전송)
 

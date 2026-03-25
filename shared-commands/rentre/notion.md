@@ -5,7 +5,7 @@ Notion 워크스페이스에서 문서를 검색, 조회, 요약합니다.
 
 ## 핵심 정보
 - 워크스페이스: 렌트리
-- Stephen Notion ID: 121d872b-594c-81ce-bec2-00027566bb0d
+- Notion User ID: {{NOTION_USER_ID}}
 
 ## 지시
 1. 요청에서 검색 키워드 추출
