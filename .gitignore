@@ -1,0 +1,20 @@
+# Logs
+logs/
+*.log
+
+# Lock files
+*.lock
+
+# Claude local settings
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# Env
+.env
+.env.*
