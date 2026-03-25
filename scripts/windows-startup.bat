@@ -8,4 +8,4 @@ REM ============================================
 
 REM WSL은 자동 시작되므로 바로 agent 실행 (5초 여유)
 timeout /t 5 /nobreak
-wsl -- bash -c "/home/stephen/home/stephen/rentre-agents/scripts/start-agent.sh >> /home/stephen/home/stephen/rentre-agents/logs/startup.log 2>&1"
+wsl -- bash -c "$HOME/.rentre-agents/scripts/start-agent.sh >> $HOME/.rentre-agents/logs/startup.log 2>&1"
