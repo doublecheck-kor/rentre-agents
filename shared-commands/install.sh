@@ -167,15 +167,28 @@ else
 fi
 
 echo ""
-echo -e "${GREEN}[OK] Rentre Agents v${INSTALLED_VERSION} 설치 완료!${NC}"
+echo -e "${GREEN}"
+cat << 'LOGO'
+    ____             __
+   / __ \___  ____  / /_________
+  / /_/ / _ \/ __ \/ __/ ___/ _ \
+ / _, _/  __/ / / / /_/ /  /  __/
+/_/ |_|\___/_/ /_/\__/_/   \___/
+                         Agents
+LOGO
+echo -e "${NC}"
+echo -e "  ${GREEN}v${INSTALLED_VERSION}${NC} 설치 완료!"
 echo ""
-echo "사용 가능한 커맨드:"
-for f in "$TARGET_DIR"/*.md; do
-    [ -f "$f" ] || continue
-    name=$(basename "$f" .md)
-    [[ "$name" == _* ]] && continue
-    echo "  /rentre:$name"
-done
+
+# config에서 사용자 이름 가져오기
+if [ -f "$CONFIG_FILE" ]; then
+    USER_NAME=$(node -e "const c=require('$CONFIG_FILE');console.log(c.user_name||'')" 2>/dev/null)
+    if [ -n "$USER_NAME" ]; then
+        echo -e "  안녕하세요, ${GREEN}${USER_NAME}${NC}님! Rentre Agents가 준비되었습니다."
+    fi
+fi
+
 echo ""
-echo "시작하기: Claude Code에서 /rentre:help"
-echo "업데이트: cd $(dirname "$SCRIPT_DIR") && git pull && ./shared-commands/install.sh"
+echo "  시작하기: /rentre:help"
+echo "  업데이트: cd $(dirname "$SCRIPT_DIR") && git pull && ./shared-commands/install.sh"
+echo ""
