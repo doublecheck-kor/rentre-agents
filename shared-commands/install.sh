@@ -18,6 +18,8 @@ CRON_SOURCE="$REPO_DIR/cron-prompts"
 CRON_TARGET="$HOME/.claude/rentre-cron-prompts"
 SCRIPTS_SOURCE="$REPO_DIR/scripts"
 SCRIPTS_TARGET="$HOME/.claude/rentre-scripts"
+VERSION_FILE="$REPO_DIR/VERSION"
+LOCAL_VERSION_FILE="$HOME/.claude/rentre-version"
 
 # 색상
 GREEN='\033[0;32m'
@@ -156,8 +158,16 @@ if [ -f "$REPO_DIR/CLAUDE.md.template" ]; then
     "
 fi
 
+# 버전 기록
+if [ -f "$VERSION_FILE" ]; then
+    cp "$VERSION_FILE" "$LOCAL_VERSION_FILE"
+    INSTALLED_VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
+else
+    INSTALLED_VERSION="unknown"
+fi
+
 echo ""
-echo -e "${GREEN}[OK] 설치 완료!${NC}"
+echo -e "${GREEN}[OK] Rentre Agents v${INSTALLED_VERSION} 설치 완료!${NC}"
 echo ""
 echo "사용 가능한 커맨드:"
 for f in "$TARGET_DIR"/*.md; do

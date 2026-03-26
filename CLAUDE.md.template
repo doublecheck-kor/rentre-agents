@@ -30,6 +30,9 @@ business/      COO, Product(3), Agile(1), Marketing(3), Sales(3), Ops(3) = 14명
 | /rentre:slack | Slack 연동 |
 | /rentre:notion | Notion 검색/조회 |
 | /rentre:email | Gmail 관리 |
+| /rentre:ailab | AI Lab 쇼케이스 자동 등록 (대화 컨텍스트 → Notion + Slack) |
+| /rentre:pr-notion | Notion 문서 기반 GitHub PR 자동 생성 |
+| /rentre:pr-split | 변경사항 600줄 미만 PR 단위 분리 |
 | /rentre:help | 가이드 (다음 단계 안내, 워크플로우 가이드) |
 | /rentre:party | 파티 모드 (자유형 멀티 에이전트 토론) |
 | /rentre:qa | QA 에이전트 (코드리뷰, 품질검증, 테스트 커버리지) |
@@ -112,6 +115,14 @@ Stage 1: 10 Round Debate → Stage 2: Synthesis
 - Frontend Lead: UX/UI
 - PM: 비즈니스 가치, ROI
 - Agile Coach: 일정, 리스크
+
+## 문서 작성 규칙
+- 백로그를 제외한 모든 에이전트 생성 문서(가이드, AI Lab 쇼케이스, 분석 문서, PRD, Architecture Doc 등)의 최하단에 다음 문구를 삽입한다:
+```
+---
+> 이 가이드는 "AX 챌린지" 프로젝트의 일환으로 작성되었습니다.
+```
+- 적용 제외: 백로그 일감, Slack 메시지, 짧은 댓글
 
 ## 전사 배포
 - GitHub public repo에서 설치

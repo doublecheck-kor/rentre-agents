@@ -100,22 +100,39 @@ bash "$REPO_DIR/shared-commands/install.sh"
 ### Step 8: 완료 안내
 
 ```
-=== 설정 완료! ===
+=== Rentre Agents 설치 완료! ===
 
-설치된 커맨드:
-  /rentre:help       - 가이드
-  /rentre:assistant   - 만능 비서
-  /rentre:schedule    - 일정 조회
-  /rentre:market      - 마켓/뉴스
-  /rentre:slack       - Slack 연동
-  /rentre:notion      - Notion 검색
-  /rentre:email       - 이메일 관리
-  /rentre:agile       - 애자일 프로세스
-  /rentre:develop     - 풀사이클 개발
-  /rentre:party       - 멀티에이전트 토론
-  ... 외 다수
+뭘 하고 싶으세요?
 
-시작하기: /rentre:help
+[일상 업무]
+  /rentre:assistant    무엇이든 물어보세요 (일정, 정보, 요약 등)
+  /rentre:schedule     오늘/이번주 일정 확인
+  /rentre:email        이메일 확인, 드래프트 작성
+  /rentre:market       시장 동향, 뉴스 브리핑
+
+[개발]
+  /rentre:develop      기능 개발 (토론 → 설계 → TDD → PR)
+  /rentre:quickdev     간단한 수정 (버그 픽스, 소규모 작업)
+  /rentre:pr-notion    Notion 기반 PR 자동 생성
+  /rentre:pr-split     큰 변경사항을 작은 PR로 분리
+
+[기획 & 토론]
+  /rentre:agile        PRD → 10라운드 토론 → 백로그
+  /rentre:party        자유형 멀티 에이전트 토론
+  /rentre:brainstorm   아이디어 탐색, 요구사항 도출
+
+[분석 & 품질]
+  /rentre:qa           코드리뷰, 품질 검증
+  /rentre:edge         엣지케이스 탐색
+  /rentre:challenge    설계/결정 스트레스 테스트
+  /rentre:adr          기술 의사결정 기록 & 분석
+
+[연동]
+  /rentre:slack        Slack 메시지 조회/전송
+  /rentre:notion       Notion 문서 검색/조회
+  /rentre:ailab        AI Lab 쇼케이스 등록
+
+전체 가이드: /rentre:help
 설정 변경: /rentre:setup
 업데이트: cd ~/.rentre-agents && git pull && ./shared-commands/install.sh
 ```
