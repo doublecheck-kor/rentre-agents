@@ -45,18 +45,18 @@ Claude Code CLI 위에서 동작하는 **AI 에이전트 프레임워크**입니
 
 **Claude Code에서 (추천)**
 ```
-https://github.com/rentre-kr/rentre-agents 클론하고 설치해줘
+https://github.com/doublecheck-kor/rentre-agents 클론하고 설치해줘
 ```
 
 **터미널에서**
 ```bash
-git clone https://github.com/rentre-kr/rentre-agents.git ~/.rentre-agents
+git clone https://github.com/doublecheck-kor/rentre-agents.git ~/.rentre-agents
 bash ~/.rentre-agents/shared-commands/install.sh
 ```
 
 **원클릭**
 ```bash
-curl -sL https://raw.githubusercontent.com/rentre-kr/rentre-agents/main/shared-commands/quick-install.sh | bash
+curl -sL https://raw.githubusercontent.com/doublecheck-kor/rentre-agents/main/shared-commands/quick-install.sh | bash
 ```
 
 ### 2. 초기 설정

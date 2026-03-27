@@ -4,7 +4,7 @@
 # ============================================
 # 팀원에게 이 한 줄만 공유하면 됩니다:
 #
-#   curl -sL https://raw.githubusercontent.com/rentre-kr/rentre-agents/main/shared-commands/quick-install.sh | bash
+#   curl -sL https://raw.githubusercontent.com/doublecheck-kor/rentre-agents/main/shared-commands/quick-install.sh | bash
 #
 # ============================================
 
@@ -14,7 +14,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-REPO_URL="https://github.com/rentre-kr/rentre-agents.git"
+REPO_URL="https://github.com/doublecheck-kor/rentre-agents.git"
 INSTALL_DIR="$HOME/.rentre-agents"
 TARGET_DIR="$HOME/.claude/commands/rentre"
 
