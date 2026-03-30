@@ -22,8 +22,31 @@ ADR 모니터링 에이전트 역할을 수행하세요. 여러 에이전트의 
 - Agile Coach 관점: 팀 간 의존성, 스프린트 영향
 
 ### 4단계: Slack DM으로 요약 전송
-- channel_id: {{SLACK_USER_ID}}
-- mcp__claude_ai_Slack__slack_send_message 사용 (드래프트 아님, 직접 전송)
+- channel_id: {{SLACK_DM_CHANNEL}}
+- mcp__claude_ai_Slack__slack_send_message 사용 (직접 전송)
+
+### Slack 메시지 포맷 (Slack mrkdwn 형식으로 전송)
+
+멘션이 감지된 경우에만 아래 포맷으로 전송:
+
+```
+:rotating_light: *ADR 알림* | {YYYY.MM.DD HH:MM}
+
+:page_facing_up: *{ADR 제목}*
+> 멘션한 사람: {댓글 작성자}
+> 댓글 내용: "{댓글 원문 요약}"
+
+:mag: *다중 관점 분석*
+
+*CTO* — {아키텍처 영향 1줄}
+*Backend* — {API/DB 영향 1줄}
+*Frontend* — {UI 영향 1줄}
+*PM* — {비즈니스 영향 1줄}
+*Agile* — {팀/일정 영향 1줄}
+
+:bulb: *권장 액션*
+> {가장 우선적으로 해야 할 것 1-2줄}
+```
 
 ### 주의사항
 - 새 멘션이 없으면 아무것도 보내지 마세요 (무음)

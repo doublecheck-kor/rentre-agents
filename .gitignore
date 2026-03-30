@@ -22,3 +22,6 @@ node_modules/
 # 개인 설정 (install.sh로 생성되는 파일)
 rentre-config.json
 CLAUDE.md
+
+# 렌더링된 크론 프롬프트 (개인정보 포함)
+cron-prompts/*.rendered.md
