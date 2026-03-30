@@ -126,7 +126,15 @@ BMAD Method의 Brainstorming/Elicitation Skill을 Rentre에 맞게 구현한 것
 → /rentre:develop {바로 개발}
 → /rentre:party {팀과 추가 논의}
 → /rentre:challenge {이 방향 스트레스 테스트}
+→ "백로그로" {Notion 백로그에 바로 등록}
 ```
+
+### 백로그 생성 규칙
+
+"백로그로" 명령 시 `/rentre:_backlog-rules` 규칙을 따릅니다.
+- API: `notion-create-pages` + `template_id` + parent `{"data_source_id": "{{NOTION_BACKLOG_DATASOURCE}}"}`
+- 필수 프로퍼티: 일감명([대상]+[행동]+[목적]), 일감 유형, 상태(Backlog), 우선순위
+- 브레인스토밍 결과는 주로 Discovery 또는 Epic 유형으로 생성
 
 ## 특수 명령
 

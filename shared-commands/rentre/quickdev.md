@@ -35,6 +35,11 @@
 2. 현재 코드베이스 분석 (Glob, Grep, Read)
 3. 바로 Quick Dev 플로우 시작
 
+### Notion 백로그 생성/업데이트 시
+작업 완료 후 Notion 백로그 상태를 업데이트하거나 새 일감을 생성할 때는 `/rentre:_backlog-rules` 규칙을 따릅니다.
+- API: `notion-create-pages` + `template_id` + parent `{"data_source_id": "{{NOTION_BACKLOG_DATASOURCE}}"}`
+- 필수 프로퍼티: 일감명([대상]+[행동]+[목적]), 일감 유형, 상태(Backlog), 우선순위
+
 ## 실행 방식 (3단계)
 
 ### Step 1: Quick Analysis (1분)

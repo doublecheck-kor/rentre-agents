@@ -143,7 +143,35 @@ BMAD Method의 Party Mode를 Rentre에 맞게 구현한 것입니다.
 | `주제 변경: {새 주제}` | 새로운 주제로 전환 |
 | `끝` / `마무리` | 최종 요약 + 액션 아이템 + 파티 종료 |
 | `문서화해` | 논의 결과를 PRD/Architecture 템플릿으로 정리 |
-| `백로그로` | 논의 결과를 백로그로 변환 |
+| `백로그로` | 논의 결과를 Notion 백로그로 변환 (아래 규칙 적용) |
+
+### 백로그 생성 규칙 (핵심)
+
+"백로그로" 명령 시 반드시 아래 규칙을 따릅니다.
+상세 규칙은 `/rentre:_backlog-rules` 스킬을 로드하여 확인합니다.
+
+**Notion API 호출**:
+- Tool: `mcp__claude_ai_Notion__notion-create-pages`
+- parent: `{"data_source_id": "{{NOTION_BACKLOG_DATASOURCE}}"}`
+- `template_id` 사용 시 `content`는 넣지 않음 (템플릿이 제공)
+
+**유형별 template_id**:
+| 유형 | template_id |
+|------|-------------|
+| Epic | `13c48a03-3208-80b5-ae14-f6b3304cb3b1` |
+| Story | `13c48a03-3208-808d-8672-c40c7e13fb30` |
+| Task | `13c48a03-3208-80d7-89c6-d67325faa791` |
+| Bug | `13c48a03-3208-80c2-9f00-f25f13cf9910` |
+| Discovery | `2fc48a03-3208-807b-9035-d5e438994ef8` |
+| Sub-Task | `13c48a03-3208-80ed-9b36-e3c2b84017cd` |
+
+**필수 프로퍼티**:
+- `일감명`: [대상]+[행동]+[목적] 형식 (예: "사용자는 결제 시 쿠폰을 적용할 수 있다")
+- `일감 유형`: Epic/Story/Task/Bug/Discovery/Sub-Task
+- `상태`: `Backlog` (기본값)
+- `우선순위`: Highest/High/Medium/Low/Lowest
+
+**계층 구조**: Initiative → Epic → Story/Task/Bug → Sub-Task
 
 ### Step 5: 마무리
 

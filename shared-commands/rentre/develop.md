@@ -140,6 +140,10 @@ E2E Tests (Playwright):
 | # | Task | Type | 담당 | 추정 | 의존성 |
 ```
 
+> 백로그를 Notion에 생성할 때는 `/rentre:_backlog-rules` 규칙을 따릅니다.
+> API: `notion-create-pages` + `template_id` + parent `{"data_source_id": "{{NOTION_BACKLOG_DATASOURCE}}"}`
+> 필수 프로퍼티: 일감명([대상]+[행동]+[목적]), 일감 유형, 상태(Backlog), 우선순위
+
 CEO 결정 사항이 있으면 여기서 멈추고 CEO에게 보고합니다.
 CEO 결정 사항이 없거나 CEO가 "진행해"라고 하면 Stage 3으로 이동합니다.
 
