@@ -36,7 +36,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --remove)
             rm -rf "$TARGET_DIR" "$CRON_TARGET" "$SCRIPTS_TARGET"
-            echo -e "${GREEN}[OK]${NC} rentre 커맨드 제거 완료"
+            # BMAD 제거
+            BMAD_DIR="$(cd "$(dirname "$0")/.." && pwd)/bmad-submodule"
+            [ -f "$BMAD_DIR/uninstall.sh" ] && bash "$BMAD_DIR/uninstall.sh"
+            echo -e "${GREEN}[OK]${NC} rentre + BMAD 커맨드 제거 완료"
             exit 0
             ;;
         *)
@@ -156,6 +159,15 @@ if [ -f "$REPO_DIR/CLAUDE.md.template" ]; then
         }
         fs.writeFileSync('$REPO_DIR/CLAUDE.md', content);
     "
+fi
+
+# BMAD Submodule 설치
+BMAD_DIR="$REPO_DIR/bmad-submodule"
+if [ -d "$BMAD_DIR" ] && [ -f "$BMAD_DIR/install.sh" ]; then
+    echo "BMAD Framework 설치 중..."
+    bash "$BMAD_DIR/install.sh" "$REPO_DIR"
+else
+    echo -e "${YELLOW}[!] BMAD submodule이 없습니다. git submodule update --init 을 실행하세요.${NC}"
 fi
 
 # 버전 기록

@@ -32,10 +32,11 @@ fi
 # 기존 설치 확인
 if [ -d "$INSTALL_DIR" ]; then
     echo "기존 설치 발견. 업데이트합니다..."
-    cd "$INSTALL_DIR" && git pull
+    cd "$INSTALL_DIR" && git pull --recurse-submodules
+    git submodule update --init --recursive
 else
     echo "다운로드 중..."
-    git clone "$REPO_URL" "$INSTALL_DIR"
+    git clone --recurse-submodules "$REPO_URL" "$INSTALL_DIR"
 fi
 
 # install.sh 실행
