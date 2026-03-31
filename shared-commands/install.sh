@@ -1,18 +1,28 @@
 #!/bin/bash
 # ============================================
-# Rentre Agent Commands 설치 스크립트
+# Rentre Agents 설치 스크립트
 # ============================================
-# 사용법: ./install.sh [--config /path/to/config.json]
-# 제거:   ./install.sh --remove
+# 사용법:
+#   bash install.sh                  ← 글로벌 + 현재 프로젝트에 BMAD 설치
+#   bash install.sh --global-only    ← 글로벌만 (Rentre 커맨드)
+#   bash install.sh --bmad-only      ← 현재 프로젝트에 BMAD만
+#   bash install.sh --remove         ← 전체 제거
 #
-# config.json이 있으면 플레이스홀더를 치환하여 설치합니다.
-# config.json이 없으면 /rentre:setup으로 설정을 안내합니다.
+# 동작 방식:
+#   1) 글로벌: Rentre 커맨드 → ~/.claude/commands/rentre/ (항상)
+#   2) 프로젝트: BMAD 스킬 → $PWD/.claude/skills/ (현재 디렉토리)
 # ============================================
+
+set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 SOURCE_DIR="$SCRIPT_DIR/rentre"
-TARGET_DIR="$HOME/.claude/commands/rentre"
+PROJECT_DIR="$(pwd)"
+
+# 글로벌 경로
+GLOBAL_CMD_DIR="$HOME/.claude/commands/rentre"
+GLOBAL_SKILLS_DIR="$HOME/.claude/skills"
 CONFIG_FILE="$HOME/.claude/rentre-config.json"
 CRON_SOURCE="$REPO_DIR/cron-prompts"
 CRON_TARGET="$HOME/.claude/rentre-cron-prompts"
@@ -21,25 +31,47 @@ SCRIPTS_TARGET="$HOME/.claude/rentre-scripts"
 VERSION_FILE="$REPO_DIR/VERSION"
 LOCAL_VERSION_FILE="$HOME/.claude/rentre-version"
 
+# BMAD 경로
+BMAD_DIR="$REPO_DIR/bmad-submodule"
+
 # 색상
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
-# --config 옵션 처리
+# 플래그
+DO_GLOBAL=true
+DO_BMAD=true
+
+# 옵션 처리
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --global-only)
+            DO_BMAD=false
+            shift
+            ;;
+        --bmad-only)
+            DO_GLOBAL=false
+            shift
+            ;;
         --config)
             CONFIG_FILE="$2"
             shift 2
             ;;
         --remove)
-            rm -rf "$TARGET_DIR" "$CRON_TARGET" "$SCRIPTS_TARGET"
-            # BMAD 제거
-            BMAD_DIR="$(cd "$(dirname "$0")/.." && pwd)/bmad-submodule"
-            [ -f "$BMAD_DIR/uninstall.sh" ] && bash "$BMAD_DIR/uninstall.sh"
-            echo -e "${GREEN}[OK]${NC} rentre + BMAD 커맨드 제거 완료"
+            echo -e "${YELLOW}Rentre Agents 제거 중...${NC}"
+            rm -rf "$GLOBAL_CMD_DIR" "$CRON_TARGET" "$SCRIPTS_TARGET" "$LOCAL_VERSION_FILE"
+            rm -f "$GLOBAL_SKILLS_DIR/rentre-pr-notion" "$GLOBAL_SKILLS_DIR/rentre-pr-split"
+            # 현재 프로젝트 BMAD 제거
+            if [ -d "$PROJECT_DIR/.claude/skills" ]; then
+                find "$PROJECT_DIR/.claude/skills" -maxdepth 1 -type l -name "bmad-*" -delete 2>/dev/null
+                find "$PROJECT_DIR/.claude/skills" -maxdepth 1 -type l -name "gds-*" -delete 2>/dev/null
+                rm -f "$PROJECT_DIR/.claude/skills/wds" "$PROJECT_DIR/.claude/skills/applying-fsd-architecture"
+            fi
+            rm -f "$PROJECT_DIR/_bmad"
+            echo -e "${GREEN}[OK]${NC} 제거 완료"
             exit 0
             ;;
         *)
@@ -55,129 +87,6 @@ if ! command -v claude &> /dev/null; then
     exit 1
 fi
 
-# 디렉토리 생성
-mkdir -p "$HOME/.claude/commands"
-
-# 기존 설치 정리
-[ -e "$TARGET_DIR" ] && rm -rf "$TARGET_DIR"
-[ -e "$CRON_TARGET" ] && rm -rf "$CRON_TARGET"
-[ -e "$SCRIPTS_TARGET" ] && rm -rf "$SCRIPTS_TARGET"
-
-# config.json 존재 확인
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo -e "${YELLOW}[!] 설정 파일이 없습니다.${NC}"
-    echo ""
-    echo "두 가지 방법으로 설정할 수 있습니다:"
-    echo ""
-    echo "  방법 1 (추천): Claude Code에서 /rentre:setup 실행"
-    echo "    → MCP로 Slack/Notion/Gmail 정보를 자동 감지합니다."
-    echo ""
-    echo "  방법 2: 수동 설정"
-    echo "    cp $REPO_DIR/config.example.json $CONFIG_FILE"
-    echo "    → 값을 편집한 후 이 스크립트를 다시 실행하세요."
-    echo ""
-
-    # setup 커맨드만 먼저 설치 (부트스트랩)
-    mkdir -p "$TARGET_DIR"
-    cp "$SOURCE_DIR/setup.md" "$TARGET_DIR/setup.md" 2>/dev/null
-    cp "$SOURCE_DIR/help.md" "$TARGET_DIR/help.md" 2>/dev/null
-    echo -e "${GREEN}[OK]${NC} /rentre:setup 커맨드를 설치했습니다."
-    echo "Claude Code에서 /rentre:setup 을 실행하세요."
-    exit 0
-fi
-
-echo ""
-echo -e "${GREEN}=== Rentre Agent Commands 설치 ===${NC}"
-echo ""
-
-# config.json에서 값 읽기 (node 사용 — Claude Code가 설치되어 있으므로 node는 항상 있음)
-read_config() {
-    node -e "
-        const cfg = require('$CONFIG_FILE');
-        const key = process.argv[1];
-        console.log(cfg[key] || '');
-    " "$1"
-}
-
-# 플레이스홀더 치환하여 파일 복사
-install_with_substitution() {
-    local src_dir="$1"
-    local dst_dir="$2"
-
-    mkdir -p "$dst_dir"
-
-    for src_file in "$src_dir"/*; do
-        [ -f "$src_file" ] || continue
-        local filename=$(basename "$src_file")
-        local dst_file="$dst_dir/$filename"
-
-        # 파일 복사 후 플레이스홀더 치환
-        cp "$src_file" "$dst_file"
-
-        # node로 모든 {{KEY}} 플레이스홀더를 config 값으로 치환
-        node -e "
-            const fs = require('fs');
-            const cfg = require('$CONFIG_FILE');
-            let content = fs.readFileSync('$dst_file', 'utf8');
-            for (const [key, value] of Object.entries(cfg)) {
-                const placeholder = '{{' + key.toUpperCase() + '}}';
-                content = content.split(placeholder).join(value || '');
-            }
-            fs.writeFileSync('$dst_file', content);
-        "
-    done
-}
-
-# 커맨드 파일 설치
-echo "커맨드 파일 설치 중..."
-install_with_substitution "$SOURCE_DIR" "$TARGET_DIR"
-
-# 크론 프롬프트 설치
-if [ -d "$CRON_SOURCE" ]; then
-    echo "크론 프롬프트 설치 중..."
-    install_with_substitution "$CRON_SOURCE" "$CRON_TARGET"
-fi
-
-# 스크립트 설치
-if [ -d "$SCRIPTS_SOURCE" ]; then
-    echo "스크립트 설치 중..."
-    install_with_substitution "$SCRIPTS_SOURCE" "$SCRIPTS_TARGET"
-    chmod +x "$SCRIPTS_TARGET"/*.sh 2>/dev/null
-fi
-
-# CLAUDE.md 템플릿 처리 (프로젝트 디렉토리용)
-if [ -f "$REPO_DIR/CLAUDE.md.template" ]; then
-    echo "CLAUDE.md 생성 중..."
-    cp "$REPO_DIR/CLAUDE.md.template" "$REPO_DIR/CLAUDE.md"
-    node -e "
-        const fs = require('fs');
-        const cfg = require('$CONFIG_FILE');
-        let content = fs.readFileSync('$REPO_DIR/CLAUDE.md', 'utf8');
-        for (const [key, value] of Object.entries(cfg)) {
-            const placeholder = '{{' + key.toUpperCase() + '}}';
-            content = content.split(placeholder).join(value || '');
-        }
-        fs.writeFileSync('$REPO_DIR/CLAUDE.md', content);
-    "
-fi
-
-# BMAD Submodule 설치
-BMAD_DIR="$REPO_DIR/bmad-submodule"
-if [ -d "$BMAD_DIR" ] && [ -f "$BMAD_DIR/install.sh" ]; then
-    echo "BMAD Framework 설치 중..."
-    bash "$BMAD_DIR/install.sh" "$REPO_DIR"
-else
-    echo -e "${YELLOW}[!] BMAD submodule이 없습니다. git submodule update --init 을 실행하세요.${NC}"
-fi
-
-# 버전 기록
-if [ -f "$VERSION_FILE" ]; then
-    cp "$VERSION_FILE" "$LOCAL_VERSION_FILE"
-    INSTALLED_VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
-else
-    INSTALLED_VERSION="unknown"
-fi
-
 echo ""
 echo -e "${GREEN}"
 cat << 'LOGO'
@@ -189,18 +98,166 @@ cat << 'LOGO'
                          Agents
 LOGO
 echo -e "${NC}"
-echo -e "  ${GREEN}v${INSTALLED_VERSION}${NC} 설치 완료!"
-echo ""
 
-# config에서 사용자 이름 가져오기
-if [ -f "$CONFIG_FILE" ]; then
-    USER_NAME=$(node -e "const c=require('$CONFIG_FILE');console.log(c.user_name||'')" 2>/dev/null)
-    if [ -n "$USER_NAME" ]; then
-        echo -e "  안녕하세요, ${GREEN}${USER_NAME}${NC}님! Rentre Agents가 준비되었습니다."
+# ============================================
+# 1. 글로벌 설치: Rentre 커맨드
+# ============================================
+if [ "$DO_GLOBAL" = true ]; then
+    echo -e "${CYAN}[1/2] 글로벌 설치 (Rentre 커맨드)${NC}"
+
+    # config.json 확인
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo -e "${YELLOW}[!] 설정 파일이 없습니다.${NC}"
+        echo ""
+        echo "  방법 1 (추천): Claude Code에서 /rentre:setup 실행"
+        echo "  방법 2: cp $REPO_DIR/config.example.json $CONFIG_FILE"
+        echo ""
+
+        # setup + help만 부트스트랩 설치
+        mkdir -p "$GLOBAL_CMD_DIR"
+        cp "$SOURCE_DIR/setup.md" "$GLOBAL_CMD_DIR/setup.md" 2>/dev/null
+        cp "$SOURCE_DIR/help.md" "$GLOBAL_CMD_DIR/help.md" 2>/dev/null
+        echo -e "${GREEN}  [OK]${NC} /rentre:setup, /rentre:help 설치됨"
+        echo "  → Claude Code에서 /rentre:setup 을 실행하세요."
+    else
+        # 플레이스홀더 치환 함수
+        install_with_substitution() {
+            local src_dir="$1"
+            local dst_dir="$2"
+            mkdir -p "$dst_dir"
+            for src_file in "$src_dir"/*; do
+                [ -f "$src_file" ] || continue
+                local filename=$(basename "$src_file")
+                local dst_file="$dst_dir/$filename"
+                cp "$src_file" "$dst_file"
+                node -e "
+                    const fs = require('fs');
+                    const cfg = require('$CONFIG_FILE');
+                    let content = fs.readFileSync('$dst_file', 'utf8');
+                    for (const [key, value] of Object.entries(cfg)) {
+                        const placeholder = '{{' + key.toUpperCase() + '}}';
+                        content = content.split(placeholder).join(value || '');
+                    }
+                    fs.writeFileSync('$dst_file', content);
+                "
+            done
+        }
+
+        # 기존 설치 정리
+        [ -e "$GLOBAL_CMD_DIR" ] && rm -rf "$GLOBAL_CMD_DIR"
+        [ -e "$CRON_TARGET" ] && rm -rf "$CRON_TARGET"
+        [ -e "$SCRIPTS_TARGET" ] && rm -rf "$SCRIPTS_TARGET"
+
+        # 커맨드 설치
+        install_with_substitution "$SOURCE_DIR" "$GLOBAL_CMD_DIR"
+        echo -e "${GREEN}  [OK]${NC} Rentre 커맨드 → ~/.claude/commands/rentre/"
+
+        # 크론 프롬프트
+        if [ -d "$CRON_SOURCE" ]; then
+            install_with_substitution "$CRON_SOURCE" "$CRON_TARGET"
+            echo -e "${GREEN}  [OK]${NC} 크론 프롬프트 → ~/.claude/rentre-cron-prompts/"
+        fi
+
+        # 스크립트
+        if [ -d "$SCRIPTS_SOURCE" ]; then
+            install_with_substitution "$SCRIPTS_SOURCE" "$SCRIPTS_TARGET"
+            chmod +x "$SCRIPTS_TARGET"/*.sh 2>/dev/null
+            echo -e "${GREEN}  [OK]${NC} 스크립트 → ~/.claude/rentre-scripts/"
+        fi
+    fi
+
+    # 버전 기록
+    if [ -f "$VERSION_FILE" ]; then
+        cp "$VERSION_FILE" "$LOCAL_VERSION_FILE"
     fi
 fi
 
+# ============================================
+# 2. 프로젝트 설치: BMAD 스킬
+# ============================================
+if [ "$DO_BMAD" = true ]; then
+    echo ""
+    echo -e "${CYAN}[2/2] 프로젝트 설치 (BMAD 스킬 → $PROJECT_DIR)${NC}"
+
+    if [ ! -d "$BMAD_DIR" ] || [ ! -d "$BMAD_DIR/.claude/skills" ]; then
+        echo -e "${YELLOW}  [!] BMAD submodule이 없습니다.${NC}"
+        echo "  → cd $REPO_DIR && git submodule update --init --recursive"
+    else
+        TARGET_SKILLS_DIR="$PROJECT_DIR/.claude/skills"
+        mkdir -p "$TARGET_SKILLS_DIR"
+
+        # 기존 BMAD 심링크 정리
+        REMOVED=0
+        for pattern in "bmad-*" "gds-*"; do
+            for item in "$TARGET_SKILLS_DIR"/$pattern; do
+                if [ -L "$item" ]; then
+                    rm "$item"
+                    REMOVED=$((REMOVED + 1))
+                fi
+            done
+        done
+        for exact in "wds" "applying-fsd-architecture"; do
+            if [ -L "$TARGET_SKILLS_DIR/$exact" ]; then
+                rm "$TARGET_SKILLS_DIR/$exact"
+                REMOVED=$((REMOVED + 1))
+            fi
+        done
+
+        # 절대 경로 심링크 생성
+        LINKED=0
+        for skill_dir in "$BMAD_DIR"/.claude/skills/bmad-* "$BMAD_DIR"/.claude/skills/gds-*; do
+            [ -d "$skill_dir" ] || continue
+            local_name=$(basename "$skill_dir")
+            ln -s "$skill_dir" "$TARGET_SKILLS_DIR/$local_name"
+            LINKED=$((LINKED + 1))
+        done
+        for exact in "wds" "applying-fsd-architecture"; do
+            if [ -d "$BMAD_DIR/.claude/skills/$exact" ]; then
+                ln -s "$BMAD_DIR/.claude/skills/$exact" "$TARGET_SKILLS_DIR/$exact"
+                LINKED=$((LINKED + 1))
+            fi
+        done
+        echo -e "${GREEN}  [OK]${NC} BMAD 스킬 ${LINKED}개 심링크 → $TARGET_SKILLS_DIR/"
+
+        # _bmad 심링크
+        TARGET_BMAD="$PROJECT_DIR/_bmad"
+        [ -e "$TARGET_BMAD" ] || [ -L "$TARGET_BMAD" ] && rm -rf "$TARGET_BMAD"
+        ln -s "$BMAD_DIR/_bmad" "$TARGET_BMAD"
+        echo -e "${GREEN}  [OK]${NC} _bmad → $TARGET_BMAD"
+
+        # CLAUDE.md 생성 (config가 있고, 프로젝트에 template이 없으면)
+        if [ -f "$CONFIG_FILE" ] && [ -f "$REPO_DIR/CLAUDE.md.template" ] && [ "$PROJECT_DIR" = "$REPO_DIR" ]; then
+            cp "$REPO_DIR/CLAUDE.md.template" "$REPO_DIR/CLAUDE.md"
+            node -e "
+                const fs = require('fs');
+                const cfg = require('$CONFIG_FILE');
+                let content = fs.readFileSync('$REPO_DIR/CLAUDE.md', 'utf8');
+                for (const [key, value] of Object.entries(cfg)) {
+                    const placeholder = '{{' + key.toUpperCase() + '}}';
+                    content = content.split(placeholder).join(value || '');
+                }
+                fs.writeFileSync('$REPO_DIR/CLAUDE.md', content);
+            "
+            echo -e "${GREEN}  [OK]${NC} CLAUDE.md 생성"
+        fi
+    fi
+fi
+
+# ============================================
+# 완료
+# ============================================
+echo ""
+INSTALLED_VERSION=$(cat "$VERSION_FILE" 2>/dev/null | tr -d '[:space:]' || echo "unknown")
+
+if [ -f "$CONFIG_FILE" ]; then
+    USER_NAME=$(node -e "const c=require('$CONFIG_FILE');console.log(c.user_name||'')" 2>/dev/null)
+    if [ -n "$USER_NAME" ]; then
+        echo -e "  안녕하세요, ${GREEN}${USER_NAME}${NC}님!"
+    fi
+fi
+
+echo -e "  Rentre Agents ${GREEN}v${INSTALLED_VERSION}${NC} 설치 완료"
 echo ""
 echo "  시작하기: /rentre:help"
-echo "  업데이트: cd $(dirname "$SCRIPT_DIR") && git pull && ./shared-commands/install.sh"
+echo "  전체 가이드: /bmad-help"
 echo ""
