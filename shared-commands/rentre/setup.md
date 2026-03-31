@@ -115,36 +115,25 @@ install.sh 출력 후, 추가로 다음 스킬 가이드를 보여줍니다:
 뭘 하고 싶으세요?
 
 [일상 업무]
-  /rentre:assistant    무엇이든 물어보세요 (일정, 정보, 요약 등)
-  /rentre:schedule     오늘/이번주 일정 확인
-  /rentre:email        이메일 확인, 드래프트 작성
-  /rentre:market       시장 동향, 뉴스 브리핑
+  /rentre:assistant    만능 비서 (일정, 이메일, Slack, Notion, 마켓 브리핑)
 
-[개발]
-  /rentre:develop      기능 개발 (토론 → 설계 → TDD → PR)
-  /rentre:quickdev     간단한 수정 (버그 픽스, 소규모 작업)
+[개발 — BMAD Framework]
+  /bmad-brainstorming  아이디어 탐색, 요구사항 도출
+  /bmad-create-prd     PRD 생성
+  /bmad-dev-story      스토리 구현 (TDD)
+  /bmad-quick-dev      버그 수정, 소규모 작업
+  /bmad-code-review    3-Layer 코드리뷰
+  /bmad-party-mode     멀티에이전트 토론
+
+[분석 & 연동 — Rentre 고유]
+  /rentre:adr          기술 의사결정 기록 & 5개 관점 분석
+  /rentre:ailab        AI Lab 쇼케이스 등록
   /rentre:pr-notion    Notion 기반 PR 자동 생성
   /rentre:pr-split     큰 변경사항을 작은 PR로 분리
 
-[기획 & 토론]
-  /rentre:agile        PRD → 10라운드 토론 → 백로그
-  /rentre:party        자유형 멀티 에이전트 토론
-  /rentre:brainstorm   아이디어 탐색, 요구사항 도출
-
-[분석 & 품질]
-  /rentre:qa           코드리뷰, 품질 검증
-  /rentre:edge         엣지케이스 탐색
-  /rentre:challenge    설계/결정 스트레스 테스트
-  /rentre:adr          기술 의사결정 기록 & 분석
-
-[연동]
-  /rentre:slack        Slack 메시지 조회/전송
-  /rentre:notion       Notion 문서 검색/조회
-  /rentre:ailab        AI Lab 쇼케이스 등록
-
 전체 가이드: /rentre:help
 설정 변경: /rentre:setup
-업데이트: cd ~/.rentre-agents && git pull && ./shared-commands/install.sh
+업데이트: cd ~/.rentre-agents && git pull --recurse-submodules && ./shared-commands/install.sh
 ```
 
 ## 중요 규칙
