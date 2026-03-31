@@ -82,11 +82,6 @@ business/      COO, Product(3), Agile(1), Marketing(3), Sales(3), Ops(3) = 14명
 ## Notion 백로그 규칙
 백로그 일감 생성 시 아래 규칙을 따른다. 상세 규칙: `/rentre:_backlog-rules`
 
-### API 정보
-- data_source_id: `{{NOTION_BACKLOG_DATASOURCE}}`
-- MCP: `mcp__claude_ai_Notion__notion-create-pages` (template_id 함께 전달)
-- parent: `{"data_source_id": "{{NOTION_BACKLOG_DATASOURCE}}"}`
-
 ### 유형별 템플릿 ID
 | 유형 | 템플릿 ID |
 |------|-----------|
@@ -97,12 +92,25 @@ business/      COO, Product(3), Agile(1), Marketing(3), Sales(3), Ops(3) = 14명
 | Bug | `13c48a03-3208-80c2-9f00-f25f13cf9910` |
 | Discovery | `2fc48a03-3208-807b-9035-d5e438994ef8` |
 
-### 필수 프로퍼티
-- 일감명 (title): [대상]+[행동]+[목적] 형식
-- 일감 유형 (select): Epic/Story/Task/Sub-Task/Bug/Discovery
-- 상태 (status): 기본값 `Backlog`
-- 우선순위 (select): Highest/High/Medium/Low/Lowest
-- content: 유형별 필수 섹션 포함 (목적, 작업 내용, 완료 기준)
+### 생성 방법 (반드시 이 형식 사용)
+`mcp__claude_ai_Notion__notion-create-pages` 호출 시:
+```json
+{
+  "parent": {"data_source_id": "{{NOTION_BACKLOG_DATASOURCE}}"},
+  "pages": [{
+    "template_id": "<유형별 템플릿 ID>",
+    "properties": {
+      "일감명": "제목 — [대상]+[행동]+[목적] 형식",
+      "일감 유형": "Task",
+      "상태": "Backlog",
+      "우선순위": "Medium"
+    }
+  }]
+}
+```
+- **template_id 사용 시 content는 넣지 않는다** (템플릿이 자동 제공, 비동기 적용)
+- properties만 설정하면 아이콘/색상/섹션 구조가 자동 적용됨
+- 여러 일감을 한 번에 생성할 때는 pages 배열에 여러 객체 추가
 
 ## 전사 배포
 - 설치: `rentre-agents(https://github.com/doublecheck-kor/rentre-agents) 설치하고 /rentre:setup 실행해줘`
