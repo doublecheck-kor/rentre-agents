@@ -18,29 +18,32 @@ tech/          CTO, Backend(3), Frontend(3), Data/AI(3), DevOps(2) = 12명
 business/      COO, Product(3), Agile(1), Marketing(3), Sales(3), Ops(3) = 14명
 ```
 
-## 글로벌 커맨드 (~/.claude/commands/rentre/)
+## 시스템 구조
+- **개발 프로세스** → BMAD Framework v6 스킬 사용 (`/bmad-*`)
+- **업무 자동화** → Rentre 커맨드 사용 (`/rentre:*`, 7개)
+
+## Rentre 커맨드 (~/.claude/commands/rentre/)
 | 커맨드 | 용도 |
 |--------|------|
-| /rentre:assistant | 만능 비서 |
-| /rentre:schedule | 일정 조회 (Google Calendar) |
-| /rentre:market | 마켓/뉴스 브리핑 |
-| /rentre:agile | 애자일 프로세스 (10라운드 토론 + PRD/Architecture Doc + 백로그) |
-| /rentre:develop | 풀사이클 개발 (토론 + PRD + Architecture + Story + TDD + E2E + PR) |
-| /rentre:adr | ADR 분석 (5개 관점) |
-| /rentre:slack | Slack 연동 |
-| /rentre:notion | Notion 검색/조회 |
-| /rentre:email | Gmail 관리 |
-| /rentre:ailab | AI Lab 쇼케이스 자동 등록 (대화 컨텍스트 → Notion + Slack) |
+| /rentre:assistant | 만능 비서 (일정, 이메일, Slack, Notion, 마켓 브리핑 통합) |
+| /rentre:adr | ADR 분석 (5개 관점, Notion 연동) |
+| /rentre:ailab | AI Lab 쇼케이스 자동 등록 (Notion + Slack) |
 | /rentre:pr-notion | Notion 문서 기반 GitHub PR 자동 생성 |
 | /rentre:pr-split | 변경사항 600줄 미만 PR 단위 분리 |
-| /rentre:help | 가이드 (다음 단계 안내, 워크플로우 가이드) |
-| /rentre:party | 파티 모드 (자유형 멀티 에이전트 토론) |
-| /rentre:qa | QA 에이전트 (코드리뷰, 품질검증, 테스트 커버리지) |
-| /rentre:edge | 엣지케이스 헌터 (체계적 엣지케이스 탐색) |
-| /rentre:challenge | 적대적 리뷰 (설계/결정 스트레스 테스트) |
-| /rentre:brainstorm | 브레인스토밍 (아이디어 → 요구사항 도출) |
-| /rentre:quickdev | 빠른 개발 (소규모 작업용 축약 TDD+PR) |
-| /rentre:setup | 초기 설정 (MCP 자동 감지 + 설치) |
+| /rentre:help | Rentre + BMAD 통합 가이드 |
+| /rentre:setup | 초기 설정 (MCP 자동 감지 + BMAD 설치) |
+
+## BMAD 주요 스킬 (bmad-submodule/)
+| 스킬 | 용도 |
+|------|------|
+| /bmad-agent-pm | PRD 작성, 요구사항 발견 |
+| /bmad-agent-architect | 아키텍처 설계 |
+| /bmad-agent-dev | 스토리 구현 |
+| /bmad-code-review | 3-Layer 코드리뷰 |
+| /bmad-brainstorming | 브레인스토밍 |
+| /bmad-party-mode | 멀티에이전트 토론 |
+| /bmad-quick-dev | 빠른 개발 |
+| /bmad-help | BMAD 다음 단계 안내 |
 
 ## 크론 자동화 (tmux 백그라운드)
 | 시간 | 내용 |
@@ -49,72 +52,33 @@ business/      COO, Product(3), Agile(1), Marketing(3), Sales(3), Ops(3) = 14명
 | 평일 09:03 | 데일리 브리핑 (캘린더) → Slack DM |
 | 평일 08-20시 매시 | ADR 모니터링 → 멘션 감지 시 Slack DM |
 
-## 주요 파일 구조
+## 설치 구조
 ```
-rentre-agents/
-├── CLAUDE.md                 ← 이 파일 (템플릿에서 자동 생성)
-├── CLAUDE.md.template        ← CLAUDE.md 템플릿
-├── config.example.json       ← 설정 예시
-├── org-chart.md              ← 조직도
-├── executive/                ← CEO, 비서 에이전트 정의
-├── tech/                     ← Tech 팀 에이전트 정의
-├── business/                 ← Business 팀 에이전트 정의
-├── templates/                ← BMAD-inspired 구조화 템플릿
-│   ├── prd.md               ← PRD 문서 템플릿
-│   ├── architecture.md       ← 아키텍처 문서 템플릿
-│   ├── story.md             ← 유저 스토리 템플릿
-│   └── checklist.md         ← 단계별 검증 게이트
-├── scripts/
-│   ├── start-agent.sh        ← tmux 세션 시작
-│   ├── renew-agent.sh        ← 주간 자동 갱신
-│   ├── setup-crontab.sh      ← crontab 등록
-│   ├── init-prompt.txt       ← Claude Code 초기 프롬프트
-│   └── windows-startup.bat   ← Windows 시작 프로그램
-├── cron-prompts/
-│   ├── daily-briefing.md     ← 데일리 브리핑 프롬프트
-│   ├── adr-monitor.md        ← ADR 모니터링 프롬프트
-│   └── market-news.md        ← 마켓/뉴스 프롬프트
-└── shared-commands/
-    ├── install.sh            ← 전사 설치 스크립트
-    ├── quick-install.sh      ← curl 원클릭 설치
-    ├── README.md             ← 사용법 가이드
-    └── rentre/               ← 글로벌 커맨드 원본
+글로벌 (1회, ~/.claude/)
+  commands/rentre/     ← /rentre:* 커맨드 7개
+  skills/rentre-pr-*   ← PR 스킬 2개
+
+프로젝트별 (install.sh 실행한 프로젝트)
+  .claude/skills/bmad-* ← BMAD 스킬 109개 (심링크)
+  _bmad/                ← BMAD config (심링크)
 ```
 
-## 개발 방법론 (BMAD-Enhanced)
-- 애자일 (Scrum/Kanban) + BMAD Method 워크플로우
-- PRD 수신 시: 10라운드 토론 → PRD Doc → Architecture Doc → Story 분해 → 백로그
-- 단계별 Validation Gate (5개 검증 체크포인트 + PO 검증 + QA 리뷰)
-- Risk-Based Testing 전략 (리스크 매트릭스 기반 테스트 배치)
-- TDD (Test-Driven Development) 필수
-- E2E 테스트는 Playwright 필수
-- Adversarial Review + Edge Case Hunt 연동
-- PR에 토론 결과 + 문서 + 테스트 결과 포함
-- 프로젝트 타입: Greenfield(신규) / Brownfield(기존 확장) / Hotfix(긴급)
+## 개발 방법론
+- BMAD Framework v6 기반 개발 워크플로우
+- 워크플로우 샤딩 (step-01 ~ step-N, HALT 메커니즘)
+- 3-Layer 코드리뷰 (Blind Hunter → Edge Case Hunter → Acceptance Auditor)
+- 에이전트 핸드오프 (PM → Architect → Developer 자동 전환)
+- Distillate 시스템 (토큰 최적화)
+- Rentre 브릿지: BMAD 산출물 → Notion 백로그 자동 생성, Slack 알림
 
-## 개발 파이프라인 (9 Stages)
-```
-Stage 1: 10 Round Debate → Stage 2: Synthesis
-→ Stage 3: PRD Doc → Gate 1
-→ Stage 4: Architecture Doc → Gate 2
-→ Stage 5: Story Breakdown → Gate 3
-→ Stage 6: TDD Development → Gate 4
-→ Stage 7: E2E (Playwright) → Gate 5
-→ Stage 8: PR Creation → Stage 9: Retrospective
-```
+## AX 챌린지 역할 체계
+| 역할 | 담당 | 설명 |
+|------|------|------|
+| **AX 챔피언** | Tech Lead ({{USER_NAME}}) | 전사 AI 도입 총괄 리더, AX 챌린지 전체 기획·운영 |
+| **AX 전파자** | 각 팀 1명씩 | 팀 내 AI 활용 촉진, 사례 수집, 피드백 전달, 커리큘럼 분반 리더 |
 
-## 템플릿 (templates/)
-- prd.md: 문제 정의, JTBD, MoSCoW, AC, 리스크
-- architecture.md: 기술 스택, 시스템 구조, 데이터 모델, API, 보안
-- story.md: User Story, AC(Gherkin), TDD 계획, 엣지 케이스
-- checklist.md: 5개 Validation Gate 체크리스트
-
-## 토론 패널 (5명)
-- CTO: 기술 전략, 아키텍처
-- Backend Lead: API/DB/성능
-- Frontend Lead: UX/UI
-- PM: 비즈니스 가치, ROI
-- Agile Coach: 일정, 리스크
+- AX 로드맵: https://www.notion.so/rentre/AX-AI-33148a03320881198b4ec03b69a7c698
+- AX 커리큘럼: https://www.notion.so/rentre/AX-AI-5-32e48a03320881d1b545d99de5de5089
 
 ## 문서 작성 규칙
 - 백로그를 제외한 모든 에이전트 생성 문서(가이드, AI Lab 쇼케이스, 분석 문서, PRD, Architecture Doc 등)의 최하단에 다음 문구를 삽입한다:
@@ -124,7 +88,40 @@ Stage 1: 10 Round Debate → Stage 2: Synthesis
 ```
 - 적용 제외: 백로그 일감, Slack 메시지, 짧은 댓글
 
+## Notion 백로그 규칙
+백로그 일감 생성 시 아래 규칙을 따른다. 상세 규칙: `/rentre:_backlog-rules`
+
+### 유형별 템플릿 ID
+| 유형 | 템플릿 ID |
+|------|-----------|
+| Epic | `13c48a03-3208-80b5-ae14-f6b3304cb3b1` |
+| Story | `13c48a03-3208-808d-8672-c40c7e13fb30` |
+| Task | `13c48a03-3208-80d7-89c6-d67325faa791` |
+| Sub-Task | `13c48a03-3208-80ed-9b36-e3c2b84017cd` |
+| Bug | `13c48a03-3208-80c2-9f00-f25f13cf9910` |
+| Discovery | `2fc48a03-3208-807b-9035-d5e438994ef8` |
+
+### 생성 방법 (반드시 이 형식 사용)
+`mcp__claude_ai_Notion__notion-create-pages` 호출 시:
+```json
+{
+  "parent": {"data_source_id": "{{NOTION_BACKLOG_DATASOURCE}}"},
+  "pages": [{
+    "template_id": "<유형별 템플릿 ID>",
+    "properties": {
+      "일감명": "제목 — [대상]+[행동]+[목적] 형식",
+      "일감 유형": "Task",
+      "상태": "Backlog",
+      "우선순위": "Medium"
+    }
+  }]
+}
+```
+- **template_id 사용 시 content는 넣지 않는다** (템플릿이 자동 제공, 비동기 적용)
+- properties만 설정하면 아이콘/색상/섹션 구조가 자동 적용됨
+- 여러 일감을 한 번에 생성할 때는 pages 배열에 여러 객체 추가
+
 ## 전사 배포
-- GitHub public repo에서 설치
-- 설치: curl 한 줄 또는 Claude Code에서 /rentre:setup
-- 업데이트: git pull && ./shared-commands/install.sh
+- 설치: `rentre-agents(https://github.com/doublecheck-kor/rentre-agents) 설치하고 /rentre:setup 실행해줘`
+- 글로벌 Rentre 커맨드 + 프로젝트별 BMAD 스킬 자동 설치
+- 업데이트: `cd ~/.rentre-agents && git pull --recurse-submodules && ./shared-commands/install.sh`

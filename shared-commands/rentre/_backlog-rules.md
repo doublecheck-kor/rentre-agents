@@ -1,7 +1,7 @@
 # Rentre 백로그 작성 규칙
 
 이 파일은 AI 에이전트가 노션 백로그를 생성할 때 참조하는 공유 규칙입니다.
-Agile Coach(`/rentre:agile`)가 이 규칙의 관리자(게이트키퍼)입니다.
+BMAD Scrum Master(`/bmad-agent-sm`)가 이 규칙의 관리자(게이트키퍼)입니다.
 
 > **플레이스홀더 안내**: `{{KEY}}` 형식의 값은 `install.sh` 실행 시 `rentre-config.json`에서 자동 치환됩니다.
 > 치환 전(소스 상태)에서는 리터럴 문자열이므로 API 호출에 직접 사용하지 마세요.
