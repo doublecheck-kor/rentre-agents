@@ -71,6 +71,15 @@ business/      COO, Product(3), Agile(1), Marketing(3), Sales(3), Ops(3) = 14명
 - Distillate 시스템 (토큰 최적화)
 - Rentre 브릿지: BMAD 산출물 → Notion 백로그 자동 생성, Slack 알림
 
+## AX 챌린지 역할 체계
+| 역할 | 담당 | 설명 |
+|------|------|------|
+| **AX 챔피언** | Tech Lead ({{USER_NAME}}) | 전사 AI 도입 총괄 리더, AX 챌린지 전체 기획·운영 |
+| **AX 전파자** | 각 팀 1명씩 | 팀 내 AI 활용 촉진, 사례 수집, 피드백 전달, 커리큘럼 분반 리더 |
+
+- AX 로드맵: https://www.notion.so/rentre/AX-AI-33148a03320881198b4ec03b69a7c698
+- AX 커리큘럼: https://www.notion.so/rentre/AX-AI-5-32e48a03320881d1b545d99de5de5089
+
 ## 문서 작성 규칙
 - 백로그를 제외한 모든 에이전트 생성 문서(가이드, AI Lab 쇼케이스, 분석 문서, PRD, Architecture Doc 등)의 최하단에 다음 문구를 삽입한다:
 ```
