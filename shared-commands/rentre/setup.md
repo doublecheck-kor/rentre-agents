@@ -84,18 +84,44 @@ Notion MCP가 없으면:
 }
 ```
 
-### Step 7: 설치 실행
+### Step 7: rentre-agents 설치
 
-config.json 생성 후 install.sh를 실행합니다:
+#### 7-1. 서브모듈 확인/추가
+
+현재 프로젝트 디렉토리에 `rentre-agents/` 폴더가 있는지 확인합니다:
 
 ```bash
-# rentre-agents repo 경로 찾기
-REPO_DIR="$HOME/.rentre-agents"
-[ -d "$REPO_DIR" ] || REPO_DIR=$(find ~ -maxdepth 3 -name "rentre-agents" -type d 2>/dev/null | head -1)
-
-# 설치 실행
-bash "$REPO_DIR/shared-commands/install.sh"
+# 이미 서브모듈로 존재하는 경우
+if [ -d "rentre-agents/bmad-submodule" ]; then
+    echo "rentre-agents가 이미 설치되어 있습니다."
+fi
 ```
+
+없으면 서브모듈로 추가합니다:
+```bash
+git submodule add https://github.com/doublecheck-kor/rentre-agents
+git submodule update --init --recursive
+```
+
+⚠️ `.git`이 없는 디렉토리(프로젝트가 아닌 곳)에서는 서브모듈 추가가 불가합니다.
+그 경우 글로벌 커맨드만 설치합니다:
+```bash
+git clone --recurse-submodules https://github.com/doublecheck-kor/rentre-agents /tmp/rentre-agents
+bash /tmp/rentre-agents/shared-commands/install.sh --global-only
+```
+
+#### 7-2. install.sh 실행 (선택형 설치)
+
+```bash
+bash rentre-agents/install.sh
+```
+
+사용자에게 역할을 물어보고 적절한 프리셋을 추천합니다:
+- 백엔드 개발자 → `bash rentre-agents/install.sh --preset backend`
+- 프론트엔드 개발자 → `bash rentre-agents/install.sh --preset frontend`
+- PM/기획 → `bash rentre-agents/install.sh --preset pm`
+- 게임 개발 → `bash rentre-agents/install.sh --preset gamedev`
+- 잘 모르겠으면 → 대화형 메뉴로 진행
 
 ### Step 8: 완료 안내
 
@@ -133,7 +159,7 @@ install.sh 출력 후, 추가로 다음 스킬 가이드를 보여줍니다:
 
 전체 가이드: /rentre:help
 설정 변경: /rentre:setup
-업데이트: cd ~/.rentre-agents && git pull --recurse-submodules && ./shared-commands/install.sh
+업데이트: cd rentre-agents && git pull --recurse-submodules && cd .. && bash rentre-agents/install.sh
 ```
 
 ## 중요 규칙
