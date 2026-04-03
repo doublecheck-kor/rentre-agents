@@ -178,12 +178,14 @@ substitute_placeholders() {
         keys=$(jq -r 'keys[]' "$config" 2>/dev/null) || return 0
         while IFS= read -r key; do
             [ -z "$key" ] && continue
+            # jq로 값 가져오되, 개행을 \\n 리터럴로 보존
             local value
-            value=$(jq -r ".[\"$key\"] // \"\"" "$config")
+            value=$(jq -r ".[\"$key\"] // \"\"" "$config" | head -1)
             local placeholder escaped_value
             placeholder="{{$(echo "$key" | tr '[:lower:]' '[:upper:]')}}"
-            escaped_value=$(printf '%s\n' "$value" | sed 's/[&\|/]/\\&/g')
-            sedi "s|$placeholder|$escaped_value|g" "$file"
+            # sed 메타문자 이스케이프
+            escaped_value=$(printf '%s' "$value" | sed 's/[&\\/|]/\\&/g')
+            sedi "s|$placeholder|$escaped_value|g" "$file" 2>/dev/null || true
         done <<< "$keys"
     else
         # jq 없을 때 순수 bash 파싱 (단순 flat JSON)
@@ -193,8 +195,8 @@ substitute_placeholders() {
             value=$(echo "$line" | sed -n 's/.*:[[:space:]]*"\([^"]*\)".*/\1/p')
             if [ -n "$key" ] && [ -n "$value" ]; then
                 placeholder="{{$(echo "$key" | tr '[:lower:]' '[:upper:]')}}"
-                escaped_value=$(printf '%s\n' "$value" | sed 's/[&\|/]/\\&/g')
-                sedi "s|$placeholder|$escaped_value|g" "$file"
+                escaped_value=$(printf '%s' "$value" | sed 's/[&\\/|]/\\&/g')
+                sedi "s|$placeholder|$escaped_value|g" "$file" 2>/dev/null || true
             fi
         done < <(grep '"[^"]*"[[:space:]]*:' "$config")
     fi
