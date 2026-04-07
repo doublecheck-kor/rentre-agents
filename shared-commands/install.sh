@@ -495,6 +495,12 @@ load_profile() {
         skill_count=$(grep '"skill_count"' "$PROFILE_FILE" | sed 's/[^0-9]//g')
     fi
 
+    # --yes 모드: 자동으로 이전 설정 사용
+    if [ "$AUTO_YES" = true ]; then
+        echo -e "  ${CYAN}이전 설정 사용 (${skill_count}개 스킬, --yes)${NC}"
+        return 0
+    fi
+
     echo ""
     echo -e "  ${CYAN}이전 설정이 있습니다 (${skill_count}개 스킬)${NC}"
     echo ""
@@ -769,6 +775,7 @@ main() {
     local PRESET=""
     local GLOBAL_ONLY=false
     local DO_REMOVE=false
+    local AUTO_YES=false
     LINK_MODE="${LINK_MODE:-symlink}"
 
     # 옵션 파싱
@@ -782,6 +789,10 @@ main() {
                 fi
                 PRESET="$2"
                 shift 2
+                ;;
+            --yes|-y)
+                AUTO_YES=true
+                shift
                 ;;
             --global-only)
                 GLOBAL_ONLY=true
@@ -816,11 +827,13 @@ main() {
     # 홈 디렉토리 경고
     if [ "$PROJECT_DIR" = "$HOME" ]; then
         echo -e "  ${YELLOW}⚠️  홈 디렉토리에 설치하면 글로벌처럼 동작합니다.${NC}"
-        echo -ne "  계속하시겠습니까? [y/N]: "
-        read -r confirm
-        if [[ ! "$confirm" =~ ^[yY]$ ]]; then
-            echo "  설치를 취소합니다."
-            exit 0
+        if [ "$AUTO_YES" = false ]; then
+            echo -ne "  계속하시겠습니까? [y/N]: "
+            read -r confirm
+            if [[ ! "$confirm" =~ ^[yY]$ ]]; then
+                echo "  설치를 취소합니다."
+                exit 0
+            fi
         fi
     fi
 
@@ -828,10 +841,12 @@ main() {
     if [ ! -d "$PROJECT_DIR/.git" ] && [ "$GLOBAL_ONLY" = false ]; then
         echo -e "  ${YELLOW}⚠️  현재 디렉토리에 .git이 없습니다.${NC}"
         echo -e "  프로젝트 루트에서 실행해주세요."
-        echo -ne "  무시하고 계속하시겠습니까? [y/N]: "
-        read -r confirm
-        if [[ ! "$confirm" =~ ^[yY]$ ]]; then
-            exit 0
+        if [ "$AUTO_YES" = false ]; then
+            echo -ne "  무시하고 계속하시겠습니까? [y/N]: "
+            read -r confirm
+            if [[ ! "$confirm" =~ ^[yY]$ ]]; then
+                exit 0
+            fi
         fi
     fi
 
@@ -846,10 +861,12 @@ main() {
                 echo -e "  ${YELLOW}⚠️  rentre-agents가 현재 프로젝트 내에 없습니다.${NC}"
                 echo -e "  현재 프로젝트: $PROJECT_DIR"
                 echo -e "  rentre-agents: $REPO_DIR"
-                echo -ne "  계속하시겠습니까? [y/N]: "
-                read -r confirm
-                if [[ ! "$confirm" =~ ^[yY]$ ]]; then
-                    exit 0
+                if [ "$AUTO_YES" = false ]; then
+                    echo -ne "  계속하시겠습니까? [y/N]: "
+                    read -r confirm
+                    if [[ ! "$confirm" =~ ^[yY]$ ]]; then
+                        exit 0
+                    fi
                 fi
                 ;;
         esac
