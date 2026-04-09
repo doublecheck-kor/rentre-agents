@@ -1,4 +1,12 @@
-이력서 자동 평가 파이프라인. 1차 OpenAI 스크리닝 → 사전 필터링(외국인/재직상태) → Claude 2차 재평가 → Notion 인터뷰 페이지 생성 → 슬랙 알림. 크론 또는 수동 실행 가능.
+이력서 자동 평가 에이전트입니다.
+
+## 역할
+채용 이력서 평가 전체 파이프라인을 자동화합니다. 1차 OpenAI 스크리닝 → 사전 필터링 → Claude 2차 재평가 → Notion 인터뷰 페이지 생성 → 슬랙 알림.
+
+## 핵심 정보
+- Slack DM channel: {{SLACK_DM_CHANNEL}}
+- 이력서 프로젝트 경로: {{RESUME_PROJECT_PATH}}
+- 타임존: {{TIMEZONE}}
 
 ## 트리거
 - 크론 자동 실행 (매일 평일 08:03)
@@ -14,18 +22,24 @@ Step 4: Notion 인터뷰 페이지 생성 (A- 이상 후보자)
 Step 5: 슬랙 결과 알림
 ```
 
+## 지시
+
+각 Step을 순서대로 실행한다. Step 간 결과를 다음 Step의 입력으로 전달한다.
+신규 평가 대상이 없으면 사용자에게 알리고 종료한다.
+
 ---
 
 ## Step 1: OpenAI 1차 스크리닝
 
 ```bash
-cd /home/stephen/rentre-check-jd
+cd {{RESUME_PROJECT_PATH}}
 python3 evaluate.py --position be
 python3 evaluate.py --position fe
 ```
 
 - 이미 results/에 결과가 있는 파일은 자동 스킵
 - 결과: results/{파일명}.json
+- **에러 시**: evaluate.py 실행 실패하면 에러 메시지와 함께 사용자에게 알림. 한쪽 포지션만 실패하면 성공한 포지션만 계속 진행
 
 ---
 
@@ -153,3 +167,21 @@ BE 신규 N건 | FE 신규 N건
 ```
 
 **신규 평가가 없으면 슬랙 알림 생략.**
+
+---
+
+## 에러 핸들링
+
+| Step | 에러 상황 | 대응 |
+|------|-----------|------|
+| Step 1 | evaluate.py 실행 실패 | 에러 로그 포함하여 Slack DM 알림, 나머지 포지션은 계속 |
+| Step 2 | 이력서 PDF 읽기 실패 | 해당 후보자 스킵, 사유 기록. 나머지 계속 진행 |
+| Step 3 | Claude 재평가 타임아웃 | 1회 재시도 후 실패 시 해당 후보자 "재평가 실패" 표시 |
+| Step 4 | Notion API 오류 (429/5xx) | 30초 대기 후 1회 재시도. 실패 시 수동 생성 안내 |
+| Step 5 | Slack 전송 실패 | 콘솔에 결과 출력하여 수동 확인 가능하도록 함 |
+
+## 중복 방지
+
+- Step 1: results/ 디렉토리에 이미 결과 JSON이 있으면 자동 스킵
+- Step 3: 이전 Claude 재평가 결과가 있는 후보자는 재평가하지 않음
+- Step 4: Notion DB에서 동일 이름의 인터뷰 페이지가 이미 존재하면 생성 스킵, Slack 알림에 "(기존)" 표시
