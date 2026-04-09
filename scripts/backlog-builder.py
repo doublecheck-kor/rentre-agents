@@ -11,8 +11,25 @@ Usage:
 
 import argparse
 import json
+import os
 import re
 import sys
+
+# === Config ===
+
+CONFIG_PATH = os.path.expanduser("~/.claude/rentre-config.json")
+
+
+def _load_datasource_id():
+    """Load notion_backlog_datasource from rentre-config.json."""
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH) as f:
+            cfg = json.load(f)
+        ds = cfg.get("notion_backlog_datasource", "")
+        if ds and not ds.startswith("{{"):
+            return ds
+    return None
+
 
 # === Schema ===
 
@@ -140,8 +157,15 @@ def cmd_payload(args):
         "properties": properties,
     }
 
+    ds_id = _load_datasource_id()
+    if not ds_id:
+        _fail(
+            "notion_backlog_datasource가 설정되지 않음. "
+            "~/.claude/rentre-config.json 확인 또는 /rentre:setup 실행 필요"
+        )
+
     payload = {
-        "parent": {"data_source_id": "{{NOTION_BACKLOG_DATASOURCE}}"},
+        "parent": {"data_source_id": ds_id},
         "pages": [page],
     }
 
