@@ -17,7 +17,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.4.0-blue" alt="version"/>
   <img src="https://img.shields.io/badge/BMAD-v6-purple" alt="bmad"/>
-  <img src="https://img.shields.io/badge/rentre-7_commands-green" alt="commands"/>
+  <img src="https://img.shields.io/badge/rentre-8_commands-green" alt="commands"/>
   <img src="https://img.shields.io/badge/bmad-109_skills-orange" alt="skills"/>
   <img src="https://img.shields.io/badge/platform-Claude_Code_CLI-black" alt="platform"/>
 </p>
@@ -29,7 +29,7 @@
 **BMAD Framework**(개발 엔진) + **Rentre 커맨드**(업무 자동화)를 결합한 AI 에이전트 시스템입니다.
 
 - **개발 프로세스** → BMAD의 109개 스킬 (워크플로우 샤딩, 3-Layer 코드리뷰, 에이전트 핸드오프)
-- **업무 자동화** → Rentre의 7개 커맨드 (Slack, Notion, Calendar, Gmail MCP 연동)
+- **업무 자동화** → Rentre의 8개 커맨드 (Slack, Notion, Calendar, Gmail MCP 연동)
 - **자율 운영** → 크론 기반 자동 브리핑, ADR 모니터링
 
 ```
@@ -103,6 +103,7 @@ BMAD에 없는 Rentre 고유 업무 자동화 기능.
 | `/rentre:ailab` | **AI Lab 쇼케이스** — Notion DB 자동 등록 + Slack 알림 | `이 대화 쇼케이스로 등록해줘` |
 | `/rentre:pr-notion` | **Notion 기반 PR** — 요구사항 분석 → GitHub PR 자동 생성 | `[Notion URL] PR 만들어줘` |
 | `/rentre:pr-split` | **PR 분리** — 큰 변경사항을 600줄 미만 단위로 분리 | `현재 변경사항 PR 분리해줘` |
+| `/rentre:marketplace` | **마켓플레이스 등록** — rentre.config.json 생성 + 호환성 검증 | `마켓플레이스 등록 준비해줘` |
 | `/rentre:help` | Rentre + BMAD 통합 가이드 | |
 | `/rentre:setup` | 초기 설정 (MCP 자동 감지) | |
 
