@@ -83,7 +83,46 @@
   - .env 파일 → 등록 시 입력한 환경변수로 자동 생성
 ```
 
-### Step 4: rentre.config.json 생성
+### Step 4: basePath 호환성 검증 (필수)
+마켓플레이스에 임베드되면 모든 URL이 `/proxy/{slug}/` 하위로 동작한다.
+basePath는 빌드 시 자동 주입되지만, **소스 코드에 하드코딩된 경로가 있으면 깨진다.**
+
+`{app.dir}/` 하위의 소스 코드를 스캔하여 위험 패턴을 찾고 결과를 표시한다:
+
+**스캔 대상 패턴:**
+1. `router.push("/...")` 또는 `router.replace("/...")` — 단, Next.js useRouter는 basePath 자동 적용이므로 안전. `window.location` 사용만 위험
+2. `window.location.href = "/..."` 또는 `window.location.assign("/...")` — basePath 무시
+3. `<a href="/...">` — Next.js `<Link>` 대신 원시 HTML 사용
+4. `fetch("/api/...")` — 절대경로 fetch, basePath 무시
+5. `<img src="/...">` — Next.js `<Image>` 대신 원시 HTML 사용
+6. `NextResponse.redirect(new URL("/...", ...))` — middleware에서 하드코딩 redirect
+
+**결과 표시:**
+```
+=== basePath 호환성 체크 ===
+⚠️ 위험 패턴 {N}건 발견:
+
+  1. src/app/page.tsx:15 — fetch("/api/data")
+     → 수정: fetch("api/data") (선행 / 제거) 또는 NEXT_PUBLIC_BASE_PATH 사용
+
+  2. src/components/Nav.tsx:8 — <a href="/about">
+     → 수정: <Link href="/about"> 으로 교체
+
+  3. src/middleware.ts:12 — NextResponse.redirect(new URL("/login", req.url))
+     → 수정: req.nextUrl.clone() + pathname 설정
+
+✅ basePath 안전 패턴: <Link>, useRouter, <Image> — 이들은 자동 적용됨
+```
+
+위험 패턴이 0건이면:
+```
+=== basePath 호환성 체크 ===
+✅ basePath 호환성 문제 없음!
+```
+
+**핵심 원칙:** Next.js가 제공하는 `<Link>`, `useRouter`, `<Image>`, `redirect()` 등을 사용하면 basePath가 자동 적용된다. 원시 HTML(`<a>`, `<img>`) 또는 `window.location`, `fetch("/...")`는 basePath를 모르므로 피해야 한다.
+
+### Step 5: rentre.config.json 생성
 사용자 확인 후 프로젝트 루트에 파일을 생성한다:
 
 ```json
@@ -102,7 +141,7 @@
 
 > 포트(`app.port`)는 config에 넣지 않는다. 관리자 승인 시 마켓플레이스가 3101번부터 빈 포트를 자동 할당한다.
 
-### Step 5: 등록 가이드 출력
+### Step 6: 등록 가이드 출력
 UI 폼 등록에 필요한 정보를 복붙 가능한 형태로 정리한다:
 
 ```
