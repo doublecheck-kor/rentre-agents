@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.4.0-blue" alt="version"/>
+  <img src="https://img.shields.io/badge/version-0.7.0-blue" alt="version"/>
   <img src="https://img.shields.io/badge/BMAD-v6-purple" alt="bmad"/>
   <img src="https://img.shields.io/badge/rentre-8_commands-green" alt="commands"/>
   <img src="https://img.shields.io/badge/bmad-109_skills-orange" alt="skills"/>
