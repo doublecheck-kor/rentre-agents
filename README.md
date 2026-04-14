@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.7.1-blue" alt="version"/>
+  <img src="https://img.shields.io/badge/version-0.7.2-blue" alt="version"/>
   <img src="https://img.shields.io/badge/BMAD-v6-purple" alt="bmad"/>
   <img src="https://img.shields.io/badge/rentre-8_commands-green" alt="commands"/>
   <img src="https://img.shields.io/badge/bmad-109_skills-orange" alt="skills"/>
@@ -185,6 +185,14 @@ tmux 백그라운드 크론 작업:
 ## Update & Uninstall
 
 **업데이트**
+
+Claude Code에서 한 줄:
+```
+/rentre:setup 업데이트해줘
+```
+또는 자연어로 `"rentre-agents 업데이트해줘"` 라고만 해도 자동 감지됩니다.
+
+수동 업데이트:
 ```bash
 cd ~/.rentre-agents && git pull --recurse-submodules && ./shared-commands/install.sh
 ```
