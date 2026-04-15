@@ -7,7 +7,7 @@
 - AI Lab 쇼케이스 DB: https://www.notion.so/7699a3601d91475f91d970c35566eb07
 - Data Source: collection://963d2403-f479-4f22-9017-1d5081a8e2c1
 - Parent Page ID: 31f48a03-3208-81aa-ae3e-c3ee343a5e4c
-- Notion User ID: 121d872b-594c-81ce-bec2-00027566bb0d
+- Notion User ID: {{NOTION_USER_ID}}  (설치 시 rentre-config.json에서 자동 치환)
 - Slack 알림 채널: #ax-챌린지-feed
 
 ## DB 스키마
