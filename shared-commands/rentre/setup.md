@@ -74,10 +74,11 @@ git submodule update --init --recursive --remote
 cd "$(dirname "$RENTRE_DIR")"  # 프로젝트 루트로 복귀
 bash rentre-agents/install.sh --yes
 ```
+→ 프로젝트 로컬에만 설치됩니다. 글로벌도 함께 갱신하려면 `--with-global` 추가.
 
 **글로벌 모드:**
 ```bash
-bash "$HOME/.rentre-agents/shared-commands/install.sh" --yes
+bash "$HOME/.rentre-agents/shared-commands/install.sh" --global-only --yes
 ```
 
 ### 0-5. 업데이트 후 버전 비교 & 완료 보고
@@ -211,6 +212,8 @@ Bash로 실행:
 - "rentre-agents가 이미 설치되어 있습니다. 스킬을 다시 설치하겠습니다."
 - 이전 프로파일이 있으면 자동 복원: `bash rentre-agents/install.sh --yes`
 - 없으면 프리셋으로: `bash rentre-agents/install.sh --preset full --yes`
+
+⚠️ 기본값은 **프로젝트 로컬 설치**입니다. 글로벌(`~/.claude/commands/rentre/`)에도 설치하려면 `--with-global`을 추가하세요.
 
 **설치 안 된 경우 (NOT_INSTALLED):**
 

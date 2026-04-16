@@ -11,14 +11,15 @@
 #   bash rentre-agents/install.sh --preset pm
 #   bash rentre-agents/install.sh --preset gamedev
 #   bash rentre-agents/install.sh --preset full
-#   bash rentre-agents/install.sh --global-only      ← 글로벌 커맨드만
+#   bash rentre-agents/install.sh --global-only      ← 글로벌 커맨드만 (부트스트랩)
+#   bash rentre-agents/install.sh --with-global      ← 프로젝트 + 글로벌 동시 설치
 #   bash rentre-agents/install.sh --remove           ← 제거
 #
-# 설치 구조:
-#   글로벌 (~/.claude/commands/rentre/): assistant.md, help.md, setup.md
+# 설치 구조 (기본: 프로젝트-로컬만):
+#   프로젝트 (.claude/commands/rentre/): 모든 커맨드 (assistant, help, setup, adr, ailab 등)
 #   프로젝트 (.claude/skills/):          BMAD/GDS/WDS/FSD 스킬 (상대 심링크)
-#   프로젝트 (.claude/commands/rentre/): adr.md, ailab.md, _backlog-rules.md
 #   프로젝트 (_bmad):                    BMAD config (상대 심링크)
+#   글로벌 (~/.claude/commands/rentre/): --with-global 또는 --global-only 시에만
 # ============================================
 
 set -euo pipefail
@@ -55,7 +56,7 @@ NC='\033[0m'
 
 # ─── 글로벌 커맨드 목록 ─────────────────────────────
 GLOBAL_COMMANDS=("assistant.md" "help.md" "setup.md")
-PROJECT_COMMANDS=("adr.md" "ailab.md" "_backlog-rules.md" "resume-review.md" "marketplace.md")
+PROJECT_COMMANDS=("assistant.md" "help.md" "setup.md" "adr.md" "ailab.md" "_backlog-rules.md" "resume-review.md" "marketplace.md")
 
 # ─── BMAD Core 서브카테고리 정의 ─────────────────────
 declare -a BMAD_AGENTS=(
@@ -614,16 +615,18 @@ verify_installation() {
 
     local errors=0
 
-    # 글로벌 커맨드 확인
-    local global_dir="$HOME/.claude/commands/rentre"
-    for cmd in "${GLOBAL_COMMANDS[@]}"; do
-        if [ -f "$global_dir/$cmd" ]; then
-            echo -e "  ${GREEN}✅${NC} 글로벌: $cmd"
-        else
-            echo -e "  ${RED}❌${NC} 글로벌: $cmd (누락)"
-            errors=$((errors + 1))
-        fi
-    done
+    # 글로벌 커맨드 확인 (--with-global 또는 --global-only일 때만)
+    if [ "${WITH_GLOBAL:-false}" = true ] || [ "${GLOBAL_ONLY:-false}" = true ]; then
+        local global_dir="$HOME/.claude/commands/rentre"
+        for cmd in "${GLOBAL_COMMANDS[@]}"; do
+            if [ -f "$global_dir/$cmd" ]; then
+                echo -e "  ${GREEN}✅${NC} 글로벌: $cmd"
+            else
+                echo -e "  ${RED}❌${NC} 글로벌: $cmd (누락)"
+                errors=$((errors + 1))
+            fi
+        done
+    fi
 
     # 프로젝트 커맨드 확인
     local proj_cmd_dir="$PROJECT_DIR/.claude/commands/rentre"
@@ -774,6 +777,7 @@ get_preset_config() {
 main() {
     local PRESET=""
     local GLOBAL_ONLY=false
+    local WITH_GLOBAL=false
     local DO_REMOVE=false
     local AUTO_YES=false
     LINK_MODE="${LINK_MODE:-symlink}"
@@ -796,6 +800,10 @@ main() {
                 ;;
             --global-only)
                 GLOBAL_ONLY=true
+                shift
+                ;;
+            --with-global)
+                WITH_GLOBAL=true
                 shift
                 ;;
             --remove)
@@ -889,16 +897,21 @@ main() {
     # MCP 감지
     detect_mcp
 
-    # ─── Step 1: 글로벌 커맨드 설치 ──────────────
-    echo -e "  ${CYAN}${BOLD}[1/3] 글로벌 커맨드 설치${NC}"
-    install_global_commands
-    echo ""
-
+    # ─── Step 1: 커맨드 설치 ────────────────────
     if [ "$GLOBAL_ONLY" = true ]; then
+        echo -e "  ${CYAN}${BOLD}[1/1] 글로벌 커맨드 설치${NC}"
+        install_global_commands
+        echo ""
         echo -e "  ${GREEN}글로벌 커맨드 설치 완료${NC}"
         echo ""
         echo "  시작하기: /rentre:help"
         exit 0
+    fi
+
+    if [ "$WITH_GLOBAL" = true ]; then
+        echo -e "  ${CYAN}${BOLD}[0/3] 글로벌 커맨드 설치${NC}"
+        install_global_commands
+        echo ""
     fi
 
     # ─── Step 2: 프로젝트 스킬 설치 ──────────────
