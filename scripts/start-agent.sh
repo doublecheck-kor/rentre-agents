@@ -12,6 +12,15 @@ AGENT_DIR="$(dirname "$SCRIPT_DIR")"
 SESSION_NAME="rentre-agent"
 PROMPT_FILE="$SCRIPT_DIR/init-prompt.txt"
 
+# tmux 존재 확인
+if ! command -v tmux &>/dev/null; then
+    echo "ERROR: tmux가 필요합니다. 설치 방법:"
+    echo "  macOS:  brew install tmux"
+    echo "  Ubuntu: sudo apt install tmux"
+    echo "  WSL:    sudo apt install tmux"
+    exit 1
+fi
+
 # 기존 세션이 있으면 종료
 if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 기존 세션 종료 중..."

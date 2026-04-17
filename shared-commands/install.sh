@@ -45,14 +45,18 @@ BMAD_SKILLS_DIR="$BMAD_DIR/.claude/skills"
 PROFILE_FILE="$PROJECT_DIR/.claude/bmad-profile.json"
 CONFIG_FILE="$HOME/.claude/rentre-config.json"
 
-# ─── 색상 ────────────────────────────────────────────
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-DIM='\033[2m'
-NC='\033[0m'
+# ─── 색상 (비터미널이면 비활성화) ─────────────────────
+if [ -t 1 ]; then
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    RED='\033[0;31m'
+    CYAN='\033[0;36m'
+    BOLD='\033[1m'
+    DIM='\033[2m'
+    NC='\033[0m'
+else
+    GREEN='' YELLOW='' RED='' CYAN='' BOLD='' DIM='' NC=''
+fi
 
 # ─── 글로벌 커맨드 목록 ─────────────────────────────
 GLOBAL_COMMANDS=("assistant.md" "help.md" "setup.md")
@@ -519,23 +523,33 @@ load_profile() {
 }
 
 reinstall_from_profile() {
-    if ! command -v jq &>/dev/null; then
-        echo -e "  ${RED}[ERROR]${NC} 빠른 설치에는 jq가 필요합니다. 새로 선택해주세요."
-        return 1
-    fi
-
     local -a skills_to_install=()
 
-    # 프레임워크별 스킬 수집
+    # 프레임워크별 스킬 수집 (jq 우선, 없으면 sed 폴백)
     local frameworks
-    frameworks=$(jq -r '.frameworks[]' "$PROFILE_FILE" 2>/dev/null)
+    if command -v jq &>/dev/null; then
+        frameworks=$(jq -r '.frameworks[]' "$PROFILE_FILE" 2>/dev/null)
+    else
+        # 포터블 sed: "frameworks": ["a","b"] → a\nb
+        frameworks=$(sed -n 's/.*"frameworks"[[:space:]]*:[[:space:]]*\[\([^]]*\)\].*/\1/p' "$PROFILE_FILE" \
+            | sed 's/","/\n/g' | sed 's/[" ]//g')
+    fi
+
+    [ -z "$frameworks" ] && return 1
 
     while IFS= read -r fw; do
+        [ -z "$fw" ] && continue
         case "$fw" in
             "bmad-core")
                 local subcats
-                subcats=$(jq -r '.bmad_subcategories[]' "$PROFILE_FILE" 2>/dev/null)
+                if command -v jq &>/dev/null; then
+                    subcats=$(jq -r '.bmad_subcategories[]' "$PROFILE_FILE" 2>/dev/null)
+                else
+                    subcats=$(sed -n 's/.*"bmad_subcategories"[[:space:]]*:[[:space:]]*\[\([^]]*\)\].*/\1/p' "$PROFILE_FILE" \
+                        | sed 's/","/\n/g' | sed 's/[" ]//g')
+                fi
                 while IFS= read -r subcat; do
+                    [ -z "$subcat" ] && continue
                     add_bmad_subcategory_skills skills_to_install "$subcat"
                 done <<< "$subcats"
                 ;;
