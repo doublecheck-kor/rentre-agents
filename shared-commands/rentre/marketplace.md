@@ -19,12 +19,25 @@
 
 1. **package.json 확인**
    - 프로젝트 이름, 버전, description
-   - Next.js 버전 (15+ 권장)
+   - Next.js 버전 (**16 이상 필수** — 16 미만이면 등록 차단, 업그레이드 안내 후 종료)
    - 패키지 매니저 추론 (pnpm-lock.yaml 존재 → pnpm, 없으면 경고)
    - 기존 scripts 확인 (build, start, dev)
    - dependencies에서 **네이티브 모듈** 탐지:
      - `better-sqlite3`, `mysql2`, `sharp`, `bcrypt`, `pg-native`, `sqlite3`, `canvas`, `node-sass`, `@prisma/client`
      - 발견되면 `pnpm.onlyBuiltDependencies`와 `serverExternalPackages`에 추가할 목록으로 기록
+
+   - **Next.js 16 미만 감지 시 즉시 차단:**
+     ```
+     ❌ Next.js {현재 버전} 감지 — 마켓플레이스 등록에는 Next.js 16 이상이 필수입니다.
+
+     업그레이드 방법:
+       pnpm add next@latest react@latest react-dom@latest
+       # 또는
+       npm install next@latest react@latest react-dom@latest
+
+     업그레이드 후 다시 /rentre:marketplace 를 실행해주세요.
+     ```
+     → 이후 Step을 진행하지 않고 종료한다.
 
 2. **next.config.ts / next.config.js 확인**
    - 파일 존재 여부
@@ -62,7 +75,7 @@
 === 마켓플레이스 등록 준비 ===
 
 📦 프로젝트 분석:
-- Next.js 버전: {version}
+- Next.js 버전: {version} ✅ (16 이상)
 - 패키지 매니저: {pnpm|npm|yarn}
 - 앱 디렉토리: {app_dir}
 - GitHub URL: {repo_url}
@@ -286,6 +299,7 @@ supported-architectures.libc[]=glibc
 ```
 === 최종 체크리스트 ===
 
+✅ Next.js 16 이상 확인
 ✅ rentre.config.json 생성 (app.install, app.build, app.start, app.devCommand 포함)
 ✅ next.config.ts에 basePath 환경변수 기반 설정
 ✅ next.config.ts에 output: "standalone" 설정
@@ -343,6 +357,7 @@ git push
 
 ## 주의사항
 - Next.js 프로젝트가 아니면 "Next.js 전용"이라고 안내하고 종료
+- **Next.js 16 미만이면 Step 1에서 즉시 차단** — 업그레이드 안내 후 종료, 이후 단계 진행 금지
 - 기존 파일 수정 시 반드시 diff를 보여주고 사용자 확인 받기
 - `next.config.ts`의 기존 사용자 커스텀 설정은 보존 (단순 병합이 아닌 AST 수준 합치기 권장. 단순 append가 위험하면 사용자에게 수동 수정 가이드 제공)
 - rentre.config.json이 이미 있으면 새 스키마로 마이그레이션 전 반드시 확인
