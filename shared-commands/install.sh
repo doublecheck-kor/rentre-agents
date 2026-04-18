@@ -64,9 +64,9 @@ PROJECT_COMMANDS=("assistant.md" "help.md" "setup.md" "adr.md" "ailab.md" "_back
 
 # ─── BMAD Core 서브카테고리 정의 ─────────────────────
 declare -a BMAD_AGENTS=(
-    bmad-agent-pm bmad-agent-architect bmad-agent-dev bmad-agent-qa
-    bmad-agent-ux-designer bmad-agent-tech-writer bmad-agent-sm
-    bmad-agent-analyst bmad-agent-builder bmad-agent-quick-flow-solo-dev bmad-tea
+    bmad-agent-pm bmad-agent-architect bmad-agent-dev
+    bmad-agent-ux-designer bmad-agent-tech-writer
+    bmad-agent-analyst bmad-agent-builder bmad-tea
 )
 declare -a BMAD_PLANNING=(
     bmad-create-prd bmad-edit-prd bmad-validate-prd bmad-product-brief
@@ -107,7 +107,7 @@ declare -a BMAD_BUILD_TOOLS=(
     bmad-module-builder bmad-workflow-builder bmad-bmb-setup
 )
 declare -a BMAD_UTILITIES=(
-    bmad-init bmad-help bmad-party-mode
+    bmad-help bmad-party-mode bmad-checkpoint-preview bmad-prfaq
 )
 
 # ─── 유틸리티 함수 ───────────────────────────────────
@@ -605,15 +605,14 @@ cleanup_existing_skills() {
 
     local removed=0
     local _old_nullglob
-    _old_nullglob=$(shopt -p nullglob)
     shopt -s nullglob
-    for pattern in bmad-* gds-* wds* applying-fsd-architecture; do
+    for pattern in 'bmad-*' 'gds-*' 'wds*' 'applying-fsd-architecture'; do
         for item in "$target_dir"/$pattern; do
             rm -rf "$item"
             removed=$((removed + 1))
         done
     done
-    $_old_nullglob
+    shopt -u nullglob
 
     if [ "$removed" -gt 0 ]; then
         echo -e "  ${DIM}기존 스킬 ${removed}개 정리 완료${NC}"
@@ -704,15 +703,13 @@ do_remove() {
     # 프로젝트 스킬 제거
     local skills_dir="$PROJECT_DIR/.claude/skills"
     if [ -d "$skills_dir" ]; then
-        local _old_nullglob
-        _old_nullglob=$(shopt -p nullglob)
         shopt -s nullglob
-        for pattern in bmad-* gds-* wds* applying-fsd-architecture; do
+        for pattern in 'bmad-*' 'gds-*' 'wds*' 'applying-fsd-architecture'; do
             for item in "$skills_dir"/$pattern; do
                 rm -rf "$item"
             done
         done
-        $_old_nullglob
+        shopt -u nullglob
         echo -e "  ${GREEN}[OK]${NC} 프로젝트 스킬 제거"
     fi
 
@@ -899,12 +896,17 @@ main() {
         echo -e "  ${YELLOW}[!]${NC} BMAD submodule이 초기화되지 않았습니다."
         echo -e "  실행: ${CYAN}cd $REPO_DIR && git submodule update --init --recursive${NC}"
         if [ "$GLOBAL_ONLY" = false ]; then
-            echo -ne "  글로벌 커맨드만 설치하시겠습니까? [Y/n]: "
-            read -r fallback
-            if [[ "$fallback" =~ ^[nN]$ ]]; then
-                exit 1
+            if [ "$AUTO_YES" = true ]; then
+                echo -e "  ${YELLOW}[!]${NC} --yes 모드: 글로벌 커맨드만 설치합니다."
+                GLOBAL_ONLY=true
+            else
+                echo -ne "  글로벌 커맨드만 설치하시겠습니까? [Y/n]: "
+                read -r fallback
+                if [[ "$fallback" =~ ^[nN]$ ]]; then
+                    exit 1
+                fi
+                GLOBAL_ONLY=true
             fi
-            GLOBAL_ONLY=true
         fi
     fi
 
