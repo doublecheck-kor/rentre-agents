@@ -1139,6 +1139,50 @@ main() {
     echo -e "  시작하기:    ${CYAN}/rentre:help${NC}"
     echo -e "  BMAD 가이드: ${CYAN}/bmad-help${NC}"
     echo ""
+
+    # ─── SessionStart hook: 업데이트 체크 등록 ────
+    register_update_hook
+}
+
+register_update_hook() {
+    local settings_file="$PROJECT_DIR/.claude/settings.local.json"
+    local check_script="$REPO_DIR/scripts/check-update.sh"
+
+    # 스크립트 없으면 스킵
+    [ -f "$check_script" ] || return 0
+
+    # settings.local.json 없으면 생성
+    if [ ! -f "$settings_file" ]; then
+        mkdir -p "$(dirname "$settings_file")"
+        echo '{}' > "$settings_file"
+    fi
+
+    # jq 없으면 스킵
+    command -v jq &>/dev/null || return 0
+
+    # 이미 등록되어 있는지 확인
+    if jq -e '.hooks.SessionStart[]?.hooks[]? | select(.command | contains("check-update.sh"))' "$settings_file" &>/dev/null; then
+        return 0
+    fi
+
+    # SessionStart hook 추가
+    local hook_cmd="bash $check_script"
+    local tmp_file
+    tmp_file=$(mktemp)
+
+    jq --arg cmd "$hook_cmd" '
+        .hooks //= {} |
+        .hooks.SessionStart //= [] |
+        .hooks.SessionStart += [{
+            "hooks": [{
+                "type": "command",
+                "command": $cmd,
+                "timeout": 10
+            }]
+        }]
+    ' "$settings_file" > "$tmp_file" && mv "$tmp_file" "$settings_file"
+
+    echo -e "  ${GREEN}[OK]${NC} 업데이트 자동 체크 등록 (SessionStart hook)"
 }
 
 main "$@"
