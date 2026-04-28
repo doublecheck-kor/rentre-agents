@@ -68,7 +68,92 @@
    - 현재 브랜치
    - `git config user.name`으로 author 추출
 
-### Step 2: 설정값 프리뷰
+### Step 2: 보안 스캔 — 개인정보·기밀정보 (필수, 차단 단계)
+
+**소스 수정/검증 이전에 반드시 수행한다.** 마켓플레이스에 등록될 레포는 공개·반공개 환경에서 빌드/실행되므로, 키·자격증명·개인정보·회사 기밀이 코드/설정/문서에 포함되어 있으면 등록을 차단한다.
+
+**스캔 대상 파일 확장자:** `.ts`, `.tsx`, `.js`, `.jsx`, `.json`, `.md`, `.yml`, `.yaml`, `.env*`, `.sh`, `.py`, `.sql`, `.txt`
+**스캔 제외:** `node_modules`, `.next`, `dist`, `build`, `.git`, `coverage`, `*.lock`, `pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`
+
+**탐지 패턴 (ripgrep/Grep 사용):**
+
+🔴 **Critical (즉시 차단)**
+- AWS Access Key: `AKIA[0-9A-Z]{16}`
+- AWS Secret: `aws_secret_access_key\s*[:=]`
+- Private Key: `-----BEGIN (RSA |EC |DSA |OPENSSH |)PRIVATE KEY-----`
+- GitHub Token: `gh[pousr]_[A-Za-z0-9]{20,}`
+- Slack Token: `xox[baprs]-[A-Za-z0-9-]+`
+- Google API Key: `AIza[0-9A-Za-z_-]{35}`
+- JWT (실제 토큰으로 보이는 경우): `eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`
+- 일반 시크릿 하드코딩: `(api[_-]?key|secret|token|password|passwd|pwd|access[_-]?key|client[_-]?secret)\s*[:=]\s*['"][^'"$\{][^'"]{6,}['"]`
+  - **예외**: 값이 `process.env.*`, `${...}`, `<...>`, `xxx`, `your-...`, `example`, `placeholder`, `dummy`, `test`, `changeme` 같은 placeholder면 제외
+- DB 접속 문자열: `(mysql|postgres|postgresql|mongodb|mongodb\+srv|redis|amqp)://[^\s'"]*:[^\s'"@]+@`
+- `.env`, `.env.local`, `.env.production` 등이 **git에 트래킹된 경우** (`git ls-files | grep -E '^|/\.env(\.|$)'`)
+- 한국 주민등록번호: `\b\d{6}[-\s]?[1-4]\d{6}\b` (Luhn-유사 형식)
+
+🟡 **High (검토 필수)**
+- 사설 IP/내부 도메인: `\b(?:10\.\d+\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+)\b`
+- 회사 내부 호스트: `[a-z0-9-]+\.(internal|local|corp|intra)\b`, `*.rentre.kr` 중 운영/내부용으로 보이는 서브도메인
+- 한국 휴대폰 번호: `01[016789][-\s]?\d{3,4}[-\s]?\d{4}`
+- 신용카드 번호 패턴: `\b(?:\d[ -]*?){13,16}\b` (Luhn 검증 통과한 것만)
+
+🟢 **Medium (사용자 확인 권장)**
+- 회사 도메인 이메일: `[a-zA-Z0-9._%+-]+@rentre\.(?:kr|com|io)` (개인 식별 가능 시)
+- TODO/FIXME 안의 자격증명 단어: `(TODO|FIXME|XXX).*?(password|secret|key|token)`
+- README/주석 안의 실제 자격증명으로 보이는 값
+
+**git history 점검:**
+```bash
+# 추적되고 있는 .env 계열
+git ls-files | grep -E '(^|/)\.env(\.|$)'
+# 과거 커밋에 시크릿이 들어간 적이 있는지 (선택, 시간 소요)
+git log --all --full-history -p -S 'AKIA' -S 'BEGIN PRIVATE KEY' --oneline | head
+```
+
+**.gitignore 점검:**
+- `.env*` (단, `.env.example`, `.env.sample` 제외 패턴) 가 `.gitignore`에 포함되어 있는지 확인
+- 누락 시 추가 제안
+
+**결과 출력 — 발견 시 (등록 차단):**
+```
+🚨 보안 스캔 — 마켓플레이스 등록 차단
+
+🔴 Critical {N}건 (즉시 제거 + 키 재발급 필수):
+  1. src/lib/db.ts:5 — 하드코딩된 DB 비밀번호
+     password: "rentre_prod_2024"
+     → 조치: process.env.DB_PASSWORD 로 이동, 마켓플레이스 /submit 폼 환경변수에 등록
+  2. .env (git tracked!) — AWS Access Key 노출
+     → 조치: git rm --cached .env, .gitignore에 .env 추가, AWS 콘솔에서 해당 키 즉시 비활성화
+
+🟡 High {N}건 (검토 필수):
+  3. README.md:42 — 사내 IP 192.168.10.5 노출
+     → 조치: 예시 IP(192.0.2.x, RFC 5737)로 대체
+
+🟢 Medium {N}건 (확인 권장):
+  4. src/api/test.ts:12 — 'kim@rentre.kr' (실명 이메일로 보임)
+     → 조치: 더미 이메일(user@example.com)로 대체
+
+조치 가이드:
+  • 노출된 키는 즉시 발급 기관에서 재발급/폐기(revoke)할 것 — 코드 제거만으로 안전 보장 X
+  • git history에 이미 커밋된 경우 git filter-repo 또는 BFG Repo-Cleaner로 정리 후 force push
+  • 환경변수로 옮긴 후 마켓플레이스 /submit UI의 환경변수 폼에 등록
+
+수정 후 다시 /rentre:marketplace 를 실행해주세요.
+```
+→ Critical 1건 이상이거나 사용자가 High/Medium 항목을 명시적으로 무시 처리하지 않으면 **이후 Step을 진행하지 않고 종료**한다.
+
+**False positive 처리:**
+- 테스트 더미 데이터, 공개 문서의 예시 값 등 정상 케이스는 사용자에게 항목별로 확인받고 무시 가능
+- 무시할 항목은 사용자가 명시적으로 "이건 더미야 / 무시해" 라고 답해야 진행
+- 자동 무시(silent skip) 금지
+
+**결과 출력 — 이상 없을 시:**
+```
+✅ 보안 스캔 통과 — 개인정보/기밀정보 미검출
+   (스캔 파일 {N}개, 패턴 {M}종)
+```
+
+### Step 3: 설정값 프리뷰
 분석 결과를 사용자에게 보여주고 확인받는다:
 
 ```
@@ -115,7 +200,7 @@
 - `app.start`: `{app.dir}/.next/standalone/server.js` 가능성 있으면 `node .next/standalone/server.js` (standalone 빌드 시), 아니면 `next start`
 - `app.devCommand`: `pnpm dev -p $PORT` 기본
 
-### Step 3: `next.config.ts` 필수 설정 자동화
+### Step 4: `next.config.ts` 필수 설정 자동화
 
 서비스 루트(또는 `{app.dir}/`)의 `next.config.ts` 또는 `next.config.js`를 확인하고, 필수 설정을 주입한다. 파일이 없으면 새로 생성한다.
 
@@ -150,7 +235,7 @@ export default nextConfig;
 
 ⚠️ **주의**: 기존에 동작하던 사용자 설정은 보존해야 함 (예: `images.domains`, `rewrites`, `redirects` 등).
 
-### Step 4: `package.json` pnpm 설정 자동화 (네이티브 모듈 있을 때)
+### Step 5: `package.json` pnpm 설정 자동화 (네이티브 모듈 있을 때)
 
 Step 1에서 네이티브 모듈이 탐지된 경우에만 수행:
 
@@ -178,7 +263,7 @@ Step 1에서 네이티브 모듈이 탐지된 경우에만 수행:
 | `@next/swc-linux-x64-musl` | O (권장) | Next.js SWC 컴파일러 |
 | `pg` (pure JS), `drizzle-orm` | X | 순수 JS |
 
-### Step 5: `.npmrc` Alpine musl 호환 설정
+### Step 6: `.npmrc` Alpine musl 호환 설정
 
 Alpine Linux(musl libc) 환경에서 의존성 설치가 가능하도록 `.npmrc` 파일을 확인/생성한다.
 
@@ -196,7 +281,7 @@ supported-architectures.libc[]=glibc
 - 있지만 `supported-architectures` 누락 → 기존 내용 뒤에 추가
 - 이미 설정돼 있으면 → 스킵
 
-### Step 6: basePath 호환성 소스코드 점검
+### Step 7: basePath 호환성 소스코드 점검
 
 `{app.dir}/` 하위(또는 루트)의 소스 코드를 스캔하여 `basePath`를 무시하는 하드코딩 패턴을 찾는다.
 
@@ -262,7 +347,7 @@ supported-architectures.libc[]=glibc
 ✅ basePath 호환성 문제 없음!
 ```
 
-### Step 7: `rentre.config.json` 생성/업데이트
+### Step 8: `rentre.config.json` 생성/업데이트
 
 루트에 파일을 생성한다 (기존 파일은 새 스키마로 마이그레이션):
 
@@ -292,7 +377,7 @@ supported-architectures.libc[]=glibc
 
 **포트는 절대 config에 넣지 않는다.** 마켓플레이스가 환경변수 `PORT`로 주입한다.
 
-### Step 8: 최종 검증 & 등록 가이드 출력
+### Step 9: 최종 검증 & 등록 가이드 출력
 
 모든 설정이 완료된 후 사전 검증 체크리스트와 등록 가이드를 출력한다:
 
@@ -300,6 +385,7 @@ supported-architectures.libc[]=glibc
 === 최종 체크리스트 ===
 
 ✅ Next.js 16 이상 확인
+✅ 보안 스캔 통과 (개인정보/기밀정보 미검출)
 ✅ rentre.config.json 생성 (app.install, app.build, app.start, app.devCommand 포함)
 ✅ next.config.ts에 basePath 환경변수 기반 설정
 ✅ next.config.ts에 output: "standalone" 설정
@@ -358,6 +444,7 @@ git push
 ## 주의사항
 - Next.js 프로젝트가 아니면 "Next.js 전용"이라고 안내하고 종료
 - **Next.js 16 미만이면 Step 1에서 즉시 차단** — 업그레이드 안내 후 종료, 이후 단계 진행 금지
+- **Step 2 보안 스캔에서 Critical 발견 시 즉시 차단** — 키 재발급 + 코드 제거 + (필요시) git history 정리까지 완료된 후 재실행. 스캔을 우회하거나 생략하지 말 것.
 - 기존 파일 수정 시 반드시 diff를 보여주고 사용자 확인 받기
 - `next.config.ts`의 기존 사용자 커스텀 설정은 보존 (단순 병합이 아닌 AST 수준 합치기 권장. 단순 append가 위험하면 사용자에게 수동 수정 가이드 제공)
 - rentre.config.json이 이미 있으면 새 스키마로 마이그레이션 전 반드시 확인
