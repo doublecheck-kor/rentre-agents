@@ -60,7 +60,7 @@ fi
 
 # ─── 글로벌 커맨드 목록 ─────────────────────────────
 GLOBAL_COMMANDS=("assistant.md" "help.md" "setup.md")
-PROJECT_COMMANDS=("assistant.md" "help.md" "setup.md" "adr.md" "ailab.md" "_backlog-rules.md" "resume-review.md" "marketplace.md")
+PROJECT_COMMANDS=("assistant.md" "help.md" "setup.md" "adr.md" "ailab.md" "_backlog-rules.md" "resume-review.md" "marketplace.md" "pm-weekly-backlog.md")
 
 # ─── BMAD Core 서브카테고리 정의 ─────────────────────
 declare -a BMAD_AGENTS=(
