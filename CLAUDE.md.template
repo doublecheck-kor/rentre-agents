@@ -101,9 +101,10 @@ business/      COO, Product(3), Agile(1), Marketing(3), Sales(3), Ops(3) = 14명
 | Bug | `13c48a03-3208-80c2-9f00-f25f13cf9910` |
 | Discovery | `2fc48a03-3208-807b-9035-d5e438994ef8` |
 
-### 생성 방법 — 반드시 2단계로 실행
+### 생성 방법 — 반드시 2단계 (placeholder in-place 치환)
 
-> ⚠️ Notion 템플릿은 **빈 섹션 헤더만** 제공한다. 본문은 자동으로 채워지지 않으므로 Step 2까지 반드시 수행한다.
+> ⚠️ Notion 템플릿은 각 섹션에 `### [비즈니스 목표]` 같은 **placeholder 헤더 + 빈 불릿(`-`)** 을 미리 만들어 둔다.
+> Step 2에서 이 placeholder를 **`update_content`로 search-and-replace** 해야 한다. 새 헤더(`## 목적` 등)를 위에 추가하거나 `replace_content`로 덮어쓰면 템플릿이 무너진다.
 
 **Step 1: 페이지 생성** (`notion-create-pages`, template_id + properties, content 금지)
 ```json
@@ -123,17 +124,26 @@ business/      COO, Product(3), Agile(1), Marketing(3), Sales(3), Ops(3) = 14명
 }
 ```
 
-**Step 2: 본문 채우기** (`notion-update-page`, Step 1에서 반환된 page_id 사용)
-```
-page_id: <Step 1 응답의 페이지 ID>
-content: "## 목적\n...\n## 작업 내용\n- [ ] ...\n## 완료 기준\n..."
+**Step 2: placeholder 치환** (`notion-update-page` + `command: "update_content"`)
+```json
+{
+  "page_id": "<Step 1에서 반환된 페이지 ID>",
+  "command": "update_content",
+  "properties": {},
+  "content_updates": [
+    {"old_str": "### \\[목적 및 기대 효과\\]\n-", "new_str": "### 목적 및 기대 효과\n- 실제 목적 내용"},
+    {"old_str": "### \\[작업 범위 및 주요 내용\\]\n-", "new_str": "### 작업 범위 및 주요 내용\n- [ ] 작업 1\n- [ ] 작업 2"},
+    {"old_str": "### \\[완료 기준\\]\n-", "new_str": "### 완료 기준\n- 측정 가능한 완료 상태"}
+  ]
+}
 ```
 
-유형별 필수 섹션은 `/rentre:_backlog-rules` §2 참조.
+유형별 정확한 placeholder는 `/rentre:_backlog-rules` §2 참조. **이름을 임의로 바꾸지 말 것** (Task는 `[목적 및 기대 효과]`이지 `[목적]`이 아님).
 
 - ❌ template_id와 content **동시 사용 금지** (Notion 제약)
-- ❌ Step 1만 하고 "등록 완료" 보고 금지 (본문이 비어 있음)
-- ✅ 여러 일감을 한 번에 생성할 때는 pages 배열에 여러 객체 추가 (각각 Step 2 필요)
+- ❌ `replace_content`로 전체 덮어쓰기 금지 (toggle/표 사라짐)
+- ❌ 새 헤더(`## 목적`) 추가 금지 (placeholder가 아래로 밀려 페이지 어그러짐)
+- ✅ `update_content`로 placeholder만 정확히 치환
 
 ## 전사 배포
 - 설치: `rentre-agents(https://github.com/doublecheck-kor/rentre-agents) 설치하고 /rentre:setup 실행해줘`
