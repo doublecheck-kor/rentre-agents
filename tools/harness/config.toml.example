@@ -1,0 +1,25 @@
+# Harness configuration — copy to ~/.harness/config.toml and fill in secrets.
+
+[backend]
+type = "notion"
+# Notion integration token (must have access to the Heartbeat DB).
+# Or set NOTION_TOKEN env var.
+token = "secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# Data source ID of the Heartbeat DB.
+# View: https://www.notion.so/245fb77268724fd49af093403543883e
+data_source_id = "7518c695-7b24-4c1d-9e0c-043a63c3f580"
+
+[alerter.slack]
+# Prefer bot_token (allows chat.update for in-place debounce updates).
+# Or fall back to webhook_url (each alert is a fresh message).
+# Or set SLACK_BOT_TOKEN / SLACK_WEBHOOK_URL env vars.
+bot_token = "xoxb-xxxxxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx"
+# webhook_url = "https://hooks.slack.com/services/..."
+dm_channel = "D07S7RE6TK4"          # Stephen DM
+broadcast_channel = "C0AMRSL1QSJ"   # #ax-챌린지-feed
+
+debounce_window_secs = 300          # 5 min
+hourly_rate_limit = 10
+
+[identity]
+user = "stephen@rentre.kr"

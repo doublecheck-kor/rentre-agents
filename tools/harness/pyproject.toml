@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "harness"
+version = "0.1.0"
+description = "Lightweight observability harness for cron/CLI automations"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Rentre", email = "stephen@rentre.kr" }]
+dependencies = [
+    "requests>=2.31",
+    "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.scripts]
+harness-run = "harness.cli:run_main"
+harness-heartbeat = "harness.cli:heartbeat_main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/harness"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
