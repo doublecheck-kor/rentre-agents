@@ -12,7 +12,7 @@ echo "[enable-alerts] backup → $BACKUP"
 
 # Remove '--no-alert ' from harness-run lines for the 3 target tasks
 TMP=$(mktemp)
-crontab -l | sed -E '/harness-run (market-news|daily-briefing|adr-monitor) /s/ --no-alert / /g' > "$TMP"
+crontab -l | sed -E '/harness-run (market-news|daily-briefing|adr-monitor|lead-meeting-summary) /s/ --no-alert / /g' > "$TMP"
 
 echo "=== diff ==="
 diff "$BACKUP" "$TMP" || true
