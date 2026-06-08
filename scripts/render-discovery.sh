@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(dirname "$SCRIPT_DIR")"
 PROMPTS="$ROOT/cron-prompts"
-CONFIG="${RENTRE_CONFIG:-$ROOT/config.json}"
+CONFIG="${RENTRE_CONFIG:-$HOME/.claude/rentre-config.json}"
 
 DRY_RUN="${1:-true}"
 
@@ -22,6 +22,7 @@ GITHUB_ORG="$(get github_org)"
 
 # fallbacks
 [ -z "$SLACK_DM" ] && SLACK_DM="D07S7RE6TK4"
+# github_org는 아직 rentre-config.json에 없는 키라 fallback이 정상 동작(예상된 기본값)
 [ -z "$GITHUB_ORG" ] && GITHUB_ORG="doublecheck-kor"
 
 esc() { printf '%s' "$1" | sed -e 's/[&|\\]/\\&/g'; }
