@@ -476,7 +476,11 @@ supported-architectures.libc[]=glibc
 - ⚠️ **배열 순서: 피의존 모듈 먼저, 엔트리포인트 마지막.** deploy 시 정적 분석이 임포트 대상 path를 참조한다.
 
 #### observability (ADR-0005 등록 게이트 — git·headless 공통, 현재 경고 모드)
-- ADR-0005 등록 게이트가 실행 서비스에 `observability`(로깅·영속화·dashboard)를 요구한다. **단, 현재 마켓 `submit/route.ts`는 이 절을 검증하지 않는다** — 폼의 정적 안내 텍스트만 있고 런타임 효과는 없는 **포워드룩킹 필드**다(강제 모드 전환 예정). 그래도 **git·headless 모두 항상 생성**해 둔다(강제 모드 대비 + 자기문서화).
+- ADR-0005 등록 게이트가 실행 서비스에 `observability`(로깅·영속화·dashboard)를 요구한다. 검증 위치 주의:
+  - 마켓 `submit/route.ts`(등록 시점)는 이 절을 **검증하지 않는다**(폼의 정적 안내 텍스트뿐).
+  - 단, **`scripts/sync-services.ts`의 `validateObservability()`가 빌드/sync 시점에 검증**한다 — **git(app.dir 보유) 서비스**가 `observability` 누락이면 경고 출력(`⚠️ observability 절 누락 — ADR-0005 등록 게이트 규칙`). 현재 **경고 모드**(차단 X), 강제 모드 전환 예정.
+  - **headless(app.dir 없음)는 현재 sync 검증 대상이 아니다** → headless의 observability는 사실상 자기문서/포워드룩킹.
+  - 권장: **git·headless 모두 항상 생성**(git은 sync 경고 회피, headless는 강제 모드 대비 + 자기문서화).
 - `logging`: 기본 `"required"` (모든 실행 단위에 `event`/`status`/`ts`/`run_id`/`error` 로깅). 면제 시 `"not_required"` + `reason` 필수.
 - `persistence`: git=`"logrotate"`(파일) 또는 `"cloud-db"`, headless=`"windmill-history"`(Windmill 실행 이력).
 - `dashboard.type`: `"embedded"`(마켓 콘솔 렌더) | `"windmill"`(Windmill deep link) | `"external"`. `url`은 기본 `/services/{slug}/console`.
@@ -630,7 +634,8 @@ git push
 ```
 
 ## 주의사항
-- **Step 0 타입 판별이 최우선** — git / headless / url을 먼저 정하고 그에 맞는 단계만 수행. 더 이상 "Next.js 전용"이 아니다.
+- **Step 0 타입 판별이 최우선** — git / headless / url을 먼저 정하고 그에 맞는 단계만 수행. (커맨드 전체가 "Next.js 전용"이던 시절과 달리 headless/url도 다룬다.)
+- **단, git 타입 UI는 여전히 Next.js standalone 전용이다** — 마켓 git 실행은 `output:"standalone"` + `/proxy/{slug}` basePath 모델이라 Next.js만 지원한다. app/ 디렉토리가 있어도 Next.js가 아니면(Vite·Remix·CRA 등) git 타입으로 진행하지 말고 "현재 마켓은 Next.js UI만 지원" 안내 후 종료한다(향후 지원은 별도). Step 1의 Next 버전 점검 전, package.json에 `next` 의존성이 있는지부터 확인.
 - **url 타입은 Step 0에서 안내 후 즉시 종료** (repo·config·빌드 점검 없음)
 - **[git 전용] Next.js 16 미만이면 Step 1에서 즉시 차단** — 업그레이드 안내 후 종료. headless/url에는 적용하지 않는다.
 - **[공통] Step 2 보안 스캔 Critical 발견 시 즉시 차단** — 키 재발급 + 코드 제거 + (필요시) git history 정리 완료 후 재실행. 스캔 우회·생략 금지. headless는 `secrets/*.json` 등 파일 시크릿도 점검.
