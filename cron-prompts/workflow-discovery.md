@@ -2,7 +2,8 @@
 
 ## 원칙
 - 관찰 범위: **공개 영역만** — 공개 Slack 채널, 회사 Notion, 회사 GitHub 조직 레포, 정재우 본인 캘린더. DM·비공개 채널·개인 메일·타인 캘린더는 절대 보지 마세요.
-- 개인 식별: 리포트 본문에 **실명을 쓰지 마세요**. "마케팅팀 N명" 같은 집계/익명으로만 표기합니다. 실명이 필요하면 evidence 링크로 대체합니다.
+- 개인 식별: 리포트 본문에 **실명을 쓰지 마세요**. "마케팅팀 N명" 같은 집계/익명으로만 표기합니다.
+- **evidence는 URL 링크만 담습니다** — 메시지/문서/PR로 바로 가는 퍼머링크(예: Slack 메시지 링크, Notion 페이지 URL, GitHub PR URL)만 쓰고, 원문 인용·발화자 실명·내용 발췌는 절대 넣지 마세요. 실명 확인이 필요하면 링크를 통해 drill-down 합니다.
 - 목적: 사람 평가가 아니라 자동화 후보 발굴입니다.
 - 관찰 윈도우: **지난 7일**.
 
@@ -32,21 +33,21 @@ command -v harness-heartbeat >/dev/null 2>&1 && \
 ## DRY_RUN 토글
 {{DRY_RUN}}
 `{{DRY_RUN}}`는 렌더 시 `DRY_RUN=true` 또는 `DRY_RUN=false`로 치환됩니다.
-DRY_RUN이 "true"이면 Slack 전송 대신 리포트 전문을 stdout으로 출력하고 종료하세요.
+DRY_RUN이 "true"이면 **검증 모드**입니다: 리포트를 정재우 DM(`D07S7RE6TK4`)으로 **정상 전송하되**, 동일 전문을 stdout에도 함께 출력하고, 이력 파일(`discovery-history.jsonl`)에는 append하지 않습니다(연속 카운터 오염 방지). 즉 라이브와 동일하게 DM을 보내며 이력 기록만 생략합니다.
 
 ## 스캐너 정의
 
 각 스캐너는 아래 신호 스키마 배열만 반환합니다. 신호가 없으면 빈 배열 `[]`을 반환하세요 (실패 아님).
 
 오케스트레이터는 각 스캐너를 Task로 dispatch할 때 아래 출력 계약을 반드시 프롬프트에 포함시킵니다:
-"너는 다른 어떤 텍스트도 없이 신호 스키마 JSON 배열만 출력한다. 설명·인사·코드펜스(```) 금지. 신호가 없으면 `[]`. 소스 접근 실패 시 `{\"error\": \"사유\"}` 객체를 출력한다."
+"너는 다른 어떤 텍스트도 없이 신호 스키마 JSON 배열만 출력한다. 설명·인사·코드펜스(```) 금지. 신호가 없으면 `[]`. 소스 접근 실패 시 `{\"error\": \"사유\"}` 객체를 출력한다. **evidence 필드에는 원본으로 가는 URL 링크만 담는다 — 원문 인용·실명·발췌 금지.**"
 
 ### 신호 스키마
 ```json
 {
   "source": "slack|notion|calendar|git",
   "pattern": "반복되는 업무 한 줄 서술",
-  "evidence": ["근거 링크/인용 1", "근거 2"],
+  "evidence": ["https://원본-퍼머링크-1", "https://원본-퍼머링크-2"],
   "frequency": 5,
   "actors_count": 3,
   "team_hint": "마케팅|개발|영업|운영|...",
@@ -100,7 +101,7 @@ priority_score 내림차순 Top 5만 리포트에 포함합니다.
 ## 리포트 포맷
 
 전송 대상: channel_id `{{SLACK_DM_CHANNEL}}`, 도구 `mcp__claude_ai_Slack__slack_send_message`.
-Slack mrkdwn 형식. DRY_RUN이 true면 전송하지 말고 아래 전문을 stdout 출력.
+Slack mrkdwn 형식. DRY_RUN 여부와 무관하게 DM으로 전송합니다(DRY_RUN=true면 stdout에도 함께 출력).
 
 ```
 :mag: *워크플로우 발굴 리포트* | {YYYY.MM.DD} ({요일}) | 지난 7일
@@ -108,7 +109,7 @@ Slack mrkdwn 형식. DRY_RUN이 true면 전송하지 말고 아래 전문을 std
 
 *1. [{패턴 제목}]*  ⏱ ~{분}분/주  👥 {팀 N명}  🔧 난이도: {상|중|하}
    → {무엇이 반복되는지 + 어떻게 자동화 가능한지 1-2줄}
-   📎 evidence: {링크들}  {🔁 N주 연속 등장 (해당 시)}
+   📎 evidence: {URL 링크들만}  {🔁 N주 연속 등장 (해당 시)}
 
 ... (priority_score 상위 Top 5)
 
