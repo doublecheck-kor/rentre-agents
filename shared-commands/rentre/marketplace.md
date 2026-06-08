@@ -625,6 +625,11 @@ git push
 📋 4. 실행: 마켓 운영 콘솔 /services/{slug}/console 에서 스크립트 실행·이력 확인
    (자세한 디버깅·스케줄·secrets는 콘솔의 🔗 Windmill deep link)
 
+🔴 코드 수정 후 반영(중요): 마켓 "업데이트" 버튼(git pull)은 headless의 **Windmill 스크립트를 재deploy하지 않고, 변경된 시크릿도 재push하지 않는다**(updateService에 windmill 단계 없음 — git/headless 비대칭). 즉 스크립트를 고쳐 push하고 "업데이트"를 눌러도 Windmill은 **이전 버전을 계속 실행**한다. 변경 반영 방법:
+   (a) 마켓에서 **등록 해제 후 재등록** — 재설치(install)가 최신 스크립트를 다시 deploy + 시크릿 재push (가장 확실)
+   (b) **Windmill UI에서 직접** 해당 스크립트/변수 갱신 (콘솔의 🔗 deep link)
+   → 작성자에게 "업데이트로는 Windmill 로직이 안 바뀐다"를 반드시 안내한다.
+
 ⚠️ headless 자주 발생하는 실패 원인:
   - scripts[].file 경로 오타/누락 → 마켓이 **조용히 skip(비차단)**: 등록은 "성공"하나 해당 스크립트만 deploy 안 됨. 콘솔에 스크립트가 안 보이면 file 경로(레포 루트 기준) 먼저 확인
   - 런타임 ModuleNotFoundError(wmill/workspace import) → import를 try/except 밖 top-level로 (8b②)
