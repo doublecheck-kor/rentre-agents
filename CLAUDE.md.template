@@ -20,7 +20,7 @@ business/      COO, Product(3), Agile(1), Marketing(3), Sales(3), Ops(3) = 14명
 
 ## 시스템 구조
 - **개발 프로세스** → BMAD Framework v6 스킬 사용 (`/bmad-*`)
-- **업무 자동화** → Rentre 커맨드 사용 (`/rentre:*`, 7개)
+- **업무 자동화** → Rentre 커맨드 사용 (`/rentre:*`, 8개)
 
 ## Rentre 커맨드 (~/.claude/commands/rentre/)
 | 커맨드 | 용도 |
@@ -30,6 +30,7 @@ business/      COO, Product(3), Agile(1), Marketing(3), Sales(3), Ops(3) = 14명
 | /rentre:ailab | AI Lab 쇼케이스 자동 등록 (Notion + Slack) |
 | /rentre:pr-notion | Notion 문서 기반 GitHub PR 자동 생성 |
 | /rentre:pr-split | 변경사항 600줄 미만 PR 단위 분리 |
+| /rentre:marketplace | 마켓플레이스 서비스 등록 준비 — git(Next.js UI)/headless(Windmill)/url 3타입 분기, rentre.config.json 생성 + 검증 |
 | /rentre:help | Rentre + BMAD 통합 가이드 |
 | /rentre:setup | 초기 설정 (MCP 자동 감지 + BMAD 설치) |
 
