@@ -31,11 +31,15 @@ command -v harness-heartbeat >/dev/null 2>&1 && \
 
 ## DRY_RUN 토글
 {{DRY_RUN}}
+`{{DRY_RUN}}`는 렌더 시 `DRY_RUN=true` 또는 `DRY_RUN=false`로 치환됩니다.
 DRY_RUN이 "true"이면 Slack 전송 대신 리포트 전문을 stdout으로 출력하고 종료하세요.
 
 ## 스캐너 정의
 
 각 스캐너는 아래 신호 스키마 배열만 반환합니다. 신호가 없으면 빈 배열 `[]`을 반환하세요 (실패 아님).
+
+오케스트레이터는 각 스캐너를 Task로 dispatch할 때 아래 출력 계약을 반드시 프롬프트에 포함시킵니다:
+"너는 다른 어떤 텍스트도 없이 신호 스키마 JSON 배열만 출력한다. 설명·인사·코드펜스(```) 금지. 신호가 없으면 `[]`. 소스 접근 실패 시 `{\"error\": \"사유\"}` 객체를 출력한다."
 
 ### 신호 스키마
 ```json
@@ -66,9 +70,9 @@ DRY_RUN이 "true"이면 Slack 전송 대신 리포트 전문을 stdout으로 출
 - 반복 신호: 반복 회의(특히 정보 동기화성), 정형 일정 조율 패턴.
 
 ### git-scanner
-- 사용 도구: gh CLI만 (Bash). 회사 GitHub 조직 레포의 지난 7일 PR/리뷰 활동 조회.
+- 사용 도구: gh CLI만 (Bash). 회사 GitHub 조직(`{{GITHUB_ORG}}`) 레포의 지난 7일 PR/리뷰 활동 조회.
 - 반복 신호: 반복되는 PR 유형, 같은 리뷰 코멘트 반복, 정형 커밋 관습.
-- 예: `gh search prs --owner <org> --created '>=<7일전>' --json title,labels,author` 등.
+- 예: `gh search prs --owner {{GITHUB_ORG}} --created ">=$(date -d '7 days ago' +%Y-%m-%d)" --json title,labels,author` 등.
 
 ## 우선순위 점수화
 
@@ -77,6 +81,7 @@ DRY_RUN이 "true"이면 Slack 전송 대신 리포트 전문을 stdout으로 출
 ```
 weekly_minutes_saved = frequency × est_minutes_each
 reach_factor       = (영향 범위) 1명=1.0, 1팀=1.5, 전사=2.0
+                     reach는 `actors_count`와 `team_hint`로 판단합니다(여러 팀에 걸치면 전사=2.0, 한 팀 내 다수면 1팀=1.5, 1명이면 1.0).
 feasibility_factor = (구현 난이도) 상(기존 패턴 재사용)=1.5, 중(신규 커맨드)=1.0, 하(외부 연동)=0.6
 priority_score     = weekly_minutes_saved × reach_factor × feasibility_factor
 ```
@@ -88,7 +93,9 @@ priority_score 내림차순 Top 5만 리포트에 포함합니다.
 - 이력 파일: `~/.harness/discovery-history.jsonl` (없으면 빈 것으로 간주).
 - 각 줄: `{"week": "2026-W24", "pattern_key": "<정규화한 패턴 키>"}`.
 - Read 도구로 이 파일을 읽어, 이번 Top 5 중 과거 등장한 pattern_key는 연속 등장 주차 수를 세어 `🔁 N주 연속 등장`으로 표기하세요.
-- 리포트 전송(또는 DRY_RUN 출력) 후, 이번 Top 5의 pattern_key를 이번 주차로 Write 도구로 append 하세요.
+- 현재 주차 문자열은 Bash `date +%G-W%V`로 구합니다. "N주 연속"은 직전 주차들에서 끊김 없이 연속으로 등장한 주차 수입니다(이번 주 포함).
+- `pattern_key`는 `team_hint` + 패턴 핵심 키워드를 소문자 슬러그로 결합해 만듭니다(예: `개발-pr-라벨링`). 동일 클러스터는 매주 같은 key를 재사용해 연속성을 유지합니다.
+- 리포트 전송(또는 DRY_RUN 출력) 후, 이번 Top 5의 pattern_key를 이번 주차로 Write 도구로 append 하세요. 단, DRY_RUN이 true면 이력 파일에 append하지 않습니다(연속 카운터 오염 방지).
 
 ## 리포트 포맷
 
@@ -108,5 +115,6 @@ Slack mrkdwn 형식. DRY_RUN이 true면 전송하지 말고 아래 전문을 std
 :bulb: 만들고 싶은 후보가 있으면 알려주세요 — 레시피 초안을 만들어 드립니다.
 ```
 
+- `{H}` = Top 5 후보의 weekly_minutes_saved 합계 ÷ 60, 소수 첫째 자리 반올림. 각 후보의 `⏱ ~{분}분/주`는 그 클러스터의 weekly_minutes_saved.
 - 신호가 0개면: "이번 주 발굴된 반복 패턴이 없습니다" 1줄만 전송.
-- 일부 스캐너 실패 시: 리포트 하단에 `⚠️ {source} 신호 수집 실패` 주석 추가하고 나머지로 리포트 생성(graceful degradation).
+- 일부 스캐너 실패 시: 리포트 하단에 `⚠️ {source} 신호 수집 실패` 주석 추가하고 나머지로 리포트 생성(graceful degradation). 스캐너가 `{"error": ...}`를 반환하면 `⚠️ {source} 신호 수집 실패`로 처리하고, `[]`는 정상(신호 없음)으로 처리합니다.
