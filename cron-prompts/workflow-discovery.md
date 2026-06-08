@@ -69,3 +69,23 @@ DRY_RUN이 "true"이면 Slack 전송 대신 리포트 전문을 stdout으로 출
 - 사용 도구: gh CLI만 (Bash). 회사 GitHub 조직 레포의 지난 7일 PR/리뷰 활동 조회.
 - 반복 신호: 반복되는 PR 유형, 같은 리뷰 코멘트 반복, 정형 커밋 관습.
 - 예: `gh search prs --owner <org> --created '>=<7일전>' --json title,labels,author` 등.
+
+## 우선순위 점수화
+
+스캐너 신호를 의미 단위로 클러스터링(유사 패턴 병합)한 뒤, 클러스터마다 점수를 계산하세요.
+
+```
+weekly_minutes_saved = frequency × est_minutes_each
+reach_factor       = (영향 범위) 1명=1.0, 1팀=1.5, 전사=2.0
+feasibility_factor = (구현 난이도) 상(기존 패턴 재사용)=1.5, 중(신규 커맨드)=1.0, 하(외부 연동)=0.6
+priority_score     = weekly_minutes_saved × reach_factor × feasibility_factor
+```
+
+priority_score 내림차순 Top 5만 리포트에 포함합니다.
+
+## 중복 추적
+
+- 이력 파일: `~/.harness/discovery-history.jsonl` (없으면 빈 것으로 간주).
+- 각 줄: `{"week": "2026-W24", "pattern_key": "<정규화한 패턴 키>"}`.
+- Read 도구로 이 파일을 읽어, 이번 Top 5 중 과거 등장한 pattern_key는 연속 등장 주차 수를 세어 `🔁 N주 연속 등장`으로 표기하세요.
+- 리포트 전송(또는 DRY_RUN 출력) 후, 이번 Top 5의 pattern_key를 이번 주차로 Write 도구로 append 하세요.
