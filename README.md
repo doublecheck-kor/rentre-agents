@@ -109,7 +109,7 @@ BMAD에 없는 Rentre 고유 업무 자동화 기능.
 | `/rentre:ailab` | **AI Lab 쇼케이스** — Notion DB 자동 등록 + Slack 알림 | `이 대화 쇼케이스로 등록해줘` |
 | `/rentre:pr-notion` | **Notion 기반 PR** — 요구사항 분석 → GitHub PR 자동 생성 | `[Notion URL] PR 만들어줘` |
 | `/rentre:pr-split` | **PR 분리** — 큰 변경사항을 600줄 미만 단위로 분리 | `현재 변경사항 PR 분리해줘` |
-| `/rentre:marketplace` | **마켓플레이스 등록** — Next.js 16+ 필수, rentre.config.json 생성 + 호환성 검증 | `마켓플레이스 등록 준비해줘` |
+| `/rentre:marketplace` | **마켓플레이스 등록** — git(Next.js UI)/headless(Windmill)/url 3타입 자동 분기, rentre.config.json 생성 + 검증 | `마켓플레이스 등록 준비해줘` |
 | `/rentre:help` | Rentre + BMAD 통합 가이드 | |
 | `/rentre:setup` | 초기 설정 / 업데이트 (MCP 자동 감지) | |
 
