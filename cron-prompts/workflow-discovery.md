@@ -32,3 +32,40 @@ command -v harness-heartbeat >/dev/null 2>&1 && \
 ## DRY_RUN 토글
 {{DRY_RUN}}
 DRY_RUN이 "true"이면 Slack 전송 대신 리포트 전문을 stdout으로 출력하고 종료하세요.
+
+## 스캐너 정의
+
+각 스캐너는 아래 신호 스키마 배열만 반환합니다. 신호가 없으면 빈 배열 `[]`을 반환하세요 (실패 아님).
+
+### 신호 스키마
+```json
+{
+  "source": "slack|notion|calendar|git",
+  "pattern": "반복되는 업무 한 줄 서술",
+  "evidence": ["근거 링크/인용 1", "근거 2"],
+  "frequency": 5,
+  "actors_count": 3,
+  "team_hint": "마케팅|개발|영업|운영|...",
+  "est_minutes_each": 15
+}
+```
+
+### slack-scanner
+- 사용 도구: Slack 도구만 (slack_search_*, slack_read_channel). 다른 소스 도구 사용 금지.
+- 공개 채널만. DM·비공개 채널 제외.
+- 반복 신호: 동일·유사 질문 반복, "이거 누가 해줘"류 수동 요청, 같은 정보 반복 검색/공유.
+
+### notion-scanner
+- 사용 도구: Notion 도구만 (notion-search, notion-fetch).
+- 회사 워크스페이스만.
+- 반복 신호: 동일 템플릿 문서 반복 생성, 정형 리포트·백로그 수기 작성, 같은 속성 반복 업데이트.
+
+### calendar-scanner
+- 사용 도구: Google Calendar 도구만 (list_events).
+- 정재우 본인 캘린더만.
+- 반복 신호: 반복 회의(특히 정보 동기화성), 정형 일정 조율 패턴.
+
+### git-scanner
+- 사용 도구: gh CLI만 (Bash). 회사 GitHub 조직 레포의 지난 7일 PR/리뷰 활동 조회.
+- 반복 신호: 반복되는 PR 유형, 같은 리뷰 코멘트 반복, 정형 커밋 관습.
+- 예: `gh search prs --owner <org> --created '>=<7일전>' --json title,labels,author` 등.
