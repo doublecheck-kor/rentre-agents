@@ -32,7 +32,7 @@ command -v harness-heartbeat >/dev/null 2>&1 && \
 ## DRY_RUN 토글
 {{DRY_RUN}}
 `{{DRY_RUN}}`는 렌더 시 `DRY_RUN=true` 또는 `DRY_RUN=false`로 치환됩니다.
-DRY_RUN이 "true"이면 Slack 전송 대신 리포트 전문을 stdout으로 출력하고 종료하세요.
+DRY_RUN이 "true"이면 **검증 모드**입니다: 리포트를 정재우 DM(`D07S7RE6TK4`)으로 **정상 전송하되**, 동일 전문을 stdout에도 함께 출력하고, 이력 파일(`discovery-history.jsonl`)에는 append하지 않습니다(연속 카운터 오염 방지). 즉 라이브와 동일하게 DM을 보내며 이력 기록만 생략합니다.
 
 ## 스캐너 정의
 
@@ -100,7 +100,7 @@ priority_score 내림차순 Top 5만 리포트에 포함합니다.
 ## 리포트 포맷
 
 전송 대상: channel_id `{{SLACK_DM_CHANNEL}}`, 도구 `mcp__claude_ai_Slack__slack_send_message`.
-Slack mrkdwn 형식. DRY_RUN이 true면 전송하지 말고 아래 전문을 stdout 출력.
+Slack mrkdwn 형식. DRY_RUN 여부와 무관하게 DM으로 전송합니다(DRY_RUN=true면 stdout에도 함께 출력).
 
 ```
 :mag: *워크플로우 발굴 리포트* | {YYYY.MM.DD} ({요일}) | 지난 7일
