@@ -233,7 +233,7 @@ git log --all --full-history -p -S 'AKIA' -S 'BEGIN PRIVATE KEY' --oneline | hea
 
 **자동 추론 규칙:**
 - `name`: package.json의 name 또는 디렉토리명, 한글명 제안 가능
-- `slug`: name에서 영문 소문자 + 하이픈으로 변환
+- `slug`: name에서 영문 소문자 + 하이픈으로 변환. **반드시 `^[a-z0-9-]+$` 만족해야 한다**(마켓 submit이 이 정규식으로 검증 → 위반 시 등록 단계에서 400 거부). 대문자·언더스코어·공백·특수문자가 있으면 변환하고, 기존 config의 slug가 규칙 위반이면 경고하고 교정 제안
 - `icon`: 프로젝트 성격에 맞는 이모지 제안
 - `description`: README.md 첫 문단 또는 package.json description
 - `app.dir`: Next.js 앱 위치. 루트면 `.`, 하위면 해당 폴더명
@@ -408,7 +408,8 @@ supported-architectures.libc[]=glibc
   "tags": ["선택: 카탈로그 분류용"]
 }
 ```
-- `type`: Step 0 판별 결과를 **반드시 명시**한다 (`"git"` | `"headless"`). 기존 config에 `type`이 없으면 마이그레이션 시 추가. (url은 Step 0에서 종료되어 config를 만들지 않음)
+- `type`: Step 0 판별 결과를 명시한다 (`"git"` | `"headless"`). 기존 config에 `type`이 없으면 마이그레이션 시 추가. (url은 Step 0에서 종료되어 config를 만들지 않음)
+  - ⚠️ **중요(실제 동작)**: 마켓의 `submit/route.ts`는 **config의 `type`을 읽지 않는다.** 실제 제출 타입은 사용자가 `/submit`에서 **어느 탭(git/headless/url)을 클릭했는지**로 결정된다. config의 `type`은 레지스트리 메타데이터·자기문서용일 뿐. → **Step 9에서 반드시 "타입에 맞는 탭"으로 제출하도록 안내**한다(config에 `type:"headless"`만 넣고 git 탭으로 내면 windmill.scripts 검증을 안 거쳐 의도와 다르게 등록됨).
 - `tags`: 선택. 카탈로그 노출/검색용.
 
 #### 8-A. git 타입 — `app` 절
@@ -475,7 +476,7 @@ supported-architectures.libc[]=glibc
 - ⚠️ **배열 순서: 피의존 모듈 먼저, 엔트리포인트 마지막.** deploy 시 정적 분석이 임포트 대상 path를 참조한다.
 
 #### observability (ADR-0005 등록 게이트 — git·headless 공통, 현재 경고 모드)
-- 마켓은 실행 서비스에 `observability`(로깅·영속화·dashboard)를 요구한다. 누락 시 등록 폼이 경고하며, 곧 강제 모드로 전환 예정. **git·headless 모두 항상 생성한다.**
+- ADR-0005 등록 게이트가 실행 서비스에 `observability`(로깅·영속화·dashboard)를 요구한다. **단, 현재 마켓 `submit/route.ts`는 이 절을 검증하지 않는다** — 폼의 정적 안내 텍스트만 있고 런타임 효과는 없는 **포워드룩킹 필드**다(강제 모드 전환 예정). 그래도 **git·headless 모두 항상 생성**해 둔다(강제 모드 대비 + 자기문서화).
 - `logging`: 기본 `"required"` (모든 실행 단위에 `event`/`status`/`ts`/`run_id`/`error` 로깅). 면제 시 `"not_required"` + `reason` 필수.
 - `persistence`: git=`"logrotate"`(파일) 또는 `"cloud-db"`, headless=`"windmill-history"`(Windmill 실행 이력).
 - `dashboard.type`: `"embedded"`(마켓 콘솔 렌더) | `"windmill"`(Windmill deep link) | `"external"`. `url`은 기본 `/services/{slug}/console`.
@@ -486,10 +487,13 @@ supported-architectures.libc[]=glibc
 ### Step 8b: headless 전용 점검 5패턴 + 시크릿 브리지 [headless 전용]
 
 > headless 타입에서만 수행. `withdrawal-auto-processor` 이관(ADR-0005 후속)에서 검증된 패턴. **이 5패턴은 사용자 코드 로직이라 자동 수정하지 않는다 — 점검·경고·가이드만 제공**하고, 수정은 사용자가 한다(자동 주입은 위험). git 타입의 next.config 자동 주입과 다르다.
+>
+> ⚠️ **적용 범위**: 이 5패턴은 **Python(+Playwright)** headless 기준이다(`windmill.scripts[].language: "python3"`). language가 `deno`/`bun`/`go`/`bash`면 해당 언어에 맞는 항목만 적용하고, `requirements.txt`·`wmill` pip 점검(③) 등 Python 전용 항목은 건너뛴다(워크스페이스 import·top-level import·시크릿 브리지 개념은 언어 무관 동일).
 
-**① 레포 레이아웃 = Windmill 경로**
-- 멀티파일 서비스는 소스를 `f/<folder>/` 디렉토리에 그대로 배치. workspace import(`from f.<folder>.<module> import x`)가 로컬 실행에서도 동일 동작(Python namespace package — `__init__.py` 불필요).
-- `windmill.scripts[].file`이 이 레이아웃(`f/<folder>/*.py`)과 일치하는지 점검. 어긋나면 경고.
+**① 레포 레이아웃 = Windmill 경로 (멀티파일일 때만)**
+- ⚠️ **단일 파일 서비스는 `f/` 레이아웃이 필요 없다.** `file: "scripts/run.py"` + `path: "f/<folder>/run"` 처럼 소스 경로와 workspace 경로가 달라도 마켓이 정상 deploy한다(`file`=레포 내 소스, `path`=workspace 배포 위치).
+- **멀티파일(모듈 간 workspace import) 서비스만** 소스를 `f/<folder>/`에 그대로 배치한다. 그래야 workspace import(`from f.<folder>.<module> import x`)가 로컬 실행에서도 동일 동작(Python namespace package — `__init__.py` 불필요).
+- 점검: 멀티파일인데 `f/` 레이아웃이 아니면 경고. **단일 파일이면 이 항목은 N/A** (f/로 옮기라고 강요하지 말 것).
 
 **② workspace import·`import wmill`은 top-level (try/except 금지)**
 - ⚠️ workspace import나 `import wmill`을 `try/except`로 감싸면 Windmill 정적 분석이 무력화되어 의존 모듈/`wmill` 패키지가 워커 샌드박스에 설치되지 않는다 (런타임 `ModuleNotFoundError` — 실측, 2026-06-05).
@@ -618,6 +622,7 @@ git push
    (자세한 디버깅·스케줄·secrets는 콘솔의 🔗 Windmill deep link)
 
 ⚠️ headless 자주 발생하는 실패 원인:
+  - scripts[].file 경로 오타/누락 → 마켓이 **조용히 skip(비차단)**: 등록은 "성공"하나 해당 스크립트만 deploy 안 됨. 콘솔에 스크립트가 안 보이면 file 경로(레포 루트 기준) 먼저 확인
   - 런타임 ModuleNotFoundError(wmill/workspace import) → import를 try/except 밖 top-level로 (8b②)
   - 워커에 wmill 미설치 → requirements.txt 에 wmill 선언 확인
   - deploy 직후 즉시 호출 시 직전 버전 실행 → 사람이 콘솔에서 실행하는 정상 흐름은 무해, 자동화는 짧은 대기
