@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+"""Send a message to a Slack channel as the '트리' bot.
+
+Usage:
+    echo "메시지" | slack-as-tree <channel_id>
+
+Reads bot token from $SLACK_BOT_TOKEN env or ~/.harness/config.toml.
+Exits 0 on Slack ok=true, 1 on any failure.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import pathlib
+import sys
+import tomllib
+import urllib.request
+
+
+def _load_token() -> str:
+    tok = os.environ.get("SLACK_BOT_TOKEN")
+    if tok:
+        return tok
+    cfg_path = pathlib.Path.home() / ".harness" / "config.toml"
+    if not cfg_path.exists():
+        sys.exit("[slack-as-tree] no $SLACK_BOT_TOKEN and ~/.harness/config.toml missing")
+    cfg = tomllib.loads(cfg_path.read_text())
+    return cfg.get("alerter", {}).get("slack", {}).get("bot_token", "")
+
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        sys.exit("Usage: slack-as-tree <channel_id>   (message text from stdin)")
+    channel = sys.argv[1]
+    text = sys.stdin.read()
+    if not text.strip():
+        sys.exit("[slack-as-tree] empty message on stdin")
+
+    token = _load_token()
+    if not token:
+        sys.exit("[slack-as-tree] bot token not found")
+
+    req = urllib.request.Request(
+        "https://slack.com/api/chat.postMessage",
+        data=json.dumps({"channel": channel, "text": text}).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json; charset=utf-8",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read())
+    except Exception as e:
+        print(f"[slack-as-tree] http error: {e}", file=sys.stderr)
+        return 1
+
+    if data.get("ok"):
+        print(json.dumps({"channel": data.get("channel"), "ts": data.get("ts")}, ensure_ascii=False))
+        return 0
+    print(f"[slack-as-tree] slack error: {data}", file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
