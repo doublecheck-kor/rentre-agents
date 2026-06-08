@@ -89,3 +89,24 @@ priority_score 내림차순 Top 5만 리포트에 포함합니다.
 - 각 줄: `{"week": "2026-W24", "pattern_key": "<정규화한 패턴 키>"}`.
 - Read 도구로 이 파일을 읽어, 이번 Top 5 중 과거 등장한 pattern_key는 연속 등장 주차 수를 세어 `🔁 N주 연속 등장`으로 표기하세요.
 - 리포트 전송(또는 DRY_RUN 출력) 후, 이번 Top 5의 pattern_key를 이번 주차로 Write 도구로 append 하세요.
+
+## 리포트 포맷
+
+전송 대상: channel_id `{{SLACK_DM_CHANNEL}}`, 도구 `mcp__claude_ai_Slack__slack_send_message`.
+Slack mrkdwn 형식. DRY_RUN이 true면 전송하지 말고 아래 전문을 stdout 출력.
+
+```
+:mag: *워크플로우 발굴 리포트* | {YYYY.MM.DD} ({요일}) | 지난 7일
+스캔 신호 {N}개 → 자동화 후보 {M}건 | 총 절감 추정 ~{H}시간/주
+
+*1. [{패턴 제목}]*  ⏱ ~{분}분/주  👥 {팀 N명}  🔧 난이도: {상|중|하}
+   → {무엇이 반복되는지 + 어떻게 자동화 가능한지 1-2줄}
+   📎 evidence: {링크들}  {🔁 N주 연속 등장 (해당 시)}
+
+... (priority_score 상위 Top 5)
+
+:bulb: 만들고 싶은 후보가 있으면 알려주세요 — 레시피 초안을 만들어 드립니다.
+```
+
+- 신호가 0개면: "이번 주 발굴된 반복 패턴이 없습니다" 1줄만 전송.
+- 일부 스캐너 실패 시: 리포트 하단에 `⚠️ {source} 신호 수집 실패` 주석 추가하고 나머지로 리포트 생성(graceful degradation).
