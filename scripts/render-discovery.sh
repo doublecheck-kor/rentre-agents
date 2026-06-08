@@ -9,6 +9,9 @@ CONFIG="${RENTRE_CONFIG:-$ROOT/config.json}"
 
 DRY_RUN="${1:-true}"
 
+TEMPLATE="$PROMPTS/workflow-discovery.md"
+[ -f "$TEMPLATE" ] || { echo "Error: 템플릿 없음 — $TEMPLATE" >&2; exit 1; }
+
 get() {  # $1=json key → value or empty
   if [ -f "$CONFIG" ]; then
     python3 -c "import json,sys; print(json.load(open('$CONFIG')).get('$1',''))" 2>/dev/null || true
@@ -21,9 +24,13 @@ GITHUB_ORG="$(get github_org)"
 [ -z "$SLACK_DM" ] && SLACK_DM="D07S7RE6TK4"
 [ -z "$GITHUB_ORG" ] && GITHUB_ORG="doublecheck-kor"
 
+esc() { printf '%s' "$1" | sed -e 's/[&|\\]/\\&/g'; }
+SLACK_DM="$(esc "$SLACK_DM")"
+GITHUB_ORG="$(esc "$GITHUB_ORG")"
+
 sed -e "s|{{SLACK_DM_CHANNEL}}|${SLACK_DM}|g" \
     -e "s|{{GITHUB_ORG}}|${GITHUB_ORG}|g" \
     -e "s|{{DRY_RUN}}|DRY_RUN=${DRY_RUN}|g" \
-    "$PROMPTS/workflow-discovery.md" > "$PROMPTS/workflow-discovery.rendered.md"
+    "$TEMPLATE" > "$PROMPTS/workflow-discovery.rendered.md"
 
 echo "Rendered → $PROMPTS/workflow-discovery.rendered.md (DRY_RUN=${DRY_RUN}, org=${GITHUB_ORG})"
