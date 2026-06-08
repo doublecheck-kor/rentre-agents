@@ -112,7 +112,7 @@
 
 **소스 수정/검증 이전에 반드시 수행한다.** 마켓플레이스에 등록될 레포는 공개·반공개 환경에서 빌드/실행되므로, 키·자격증명·개인정보·회사 기밀이 코드/설정/문서에 포함되어 있으면 등록을 차단한다. **git·headless 공통 단계다**(url은 Step 0 종료).
 
-> **headless 추가 점검**: Python/PW headless는 파일 기반 시크릿을 쓰는 경우가 많다. 아래를 반드시 함께 점검한다 — `secrets/*.json`·`*.token`·`token.json`·`credentials.json` 같은 시크릿 파일이 git에 트래킹되는지, `requirements.txt`/스크립트에 키가 하드코딩됐는지. 발견 시 시크릿 브리지(Step 8b)로 옮기도록 차단·안내한다. (`.py`는 이미 스캔 확장자에 포함)
+> **headless 추가 점검**: Python/PW headless는 파일 기반 시크릿을 쓰는 경우가 많다. 반드시 함께 점검한다 — **`secrets/` 디렉토리 안의 모든 파일**(`*.json`·`*.token`·`*.txt`·`token.json`·`credentials.json` 등 **확장자 불문**)이 git 트래킹되는지, `requirements.txt`/스크립트에 키가 하드코딩됐는지. ⚠️ 단일 토큰만 든 `.txt`/`.token`은 내용 패턴(`token\s*[:=]`)에 안 걸리므로 **`secrets/` 경로에 있다는 것만으로 차단**한다(`git ls-files | grep -E '(^|/)secrets/'`). 발견 시 **아래 "headless 차단 출력"** 으로 시크릿 브리지(8b③) 해결 절차까지 함께 제공한다. (`.py`는 이미 스캔 확장자에 포함)
 
 **스캔 대상 파일 확장자:** `.ts`, `.tsx`, `.js`, `.jsx`, `.json`, `.md`, `.yml`, `.yaml`, `.env*`, `.sh`, `.py`, `.sql`, `.txt`
 **스캔 제외:** `node_modules`, `.next`, `dist`, `build`, `.git`, `coverage`, `*.lock`, `pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`
@@ -184,6 +184,27 @@ git log --all --full-history -p -S 'AKIA' -S 'BEGIN PRIVATE KEY' --oneline | hea
 ```
 → Critical 1건 이상이거나 사용자가 High/Medium 항목을 명시적으로 무시 처리하지 않으면 **이후 Step을 진행하지 않고 종료**한다.
 
+**결과 출력 — headless 에서 `secrets/` 파일이 git 트래킹된 경우 (차단 + 해결 절차 동시 제공):**
+> ⚠️ headless 는 차단되면 종료되어 **Step 8b(시크릿 브리지)에 도달하지 못한다.** 따라서 종료 메시지에 8b③ 해결 절차를 **함께** 출력한다 — git 전용 `process.env`/`/submit` 안내만 주면 headless 사용자는 어떻게 고칠지 모른다.
+```
+🚨 보안 차단 (headless) — secrets 파일이 git 에 트래킹됨
+
+🔴 secrets/portal.json, secrets/admin_token.txt (git tracked)
+
+해결 절차 (headless 시크릿 브리지 — 8b③):
+  1. 키 단위 분해 → envVar 키 이름 확정 (UPPER_SNAKE, 분해 매핑표로 확인):
+       secrets/portal.json {"username","password"} → PORTAL_USERNAME, PORTAL_PASSWORD
+       secrets/admin_token.txt (단일 토큰)          → ADMIN_TOKEN
+  2. git 추적 제거:  git rm -r --cached secrets/
+  3. .gitignore 에  secrets/  추가
+  4. 노출된 자격증명은 발급처에서 재발급/폐기(revoke)
+  5. 스크립트는 get_secret("PORTAL_PASSWORD") 형태로 읽도록 수정 (8b③) — 폼 키와 동일 이름
+  6. 등록 시 /submit [headless] 탭 envVars 폼에 위 키들 입력
+       → 마켓이 f/svc_<slug>/<KEY> Windmill secret 변수로 push
+
+수정 후 다시 /rentre:marketplace 를 실행해주세요.
+```
+
 **False positive 처리:**
 - 테스트 더미 데이터, 공개 문서의 예시 값 등 정상 케이스는 사용자에게 항목별로 확인받고 무시 가능
 - 무시할 항목은 사용자가 명시적으로 "이건 더미야 / 무시해" 라고 답해야 진행
@@ -232,10 +253,12 @@ git log --all --full-history -p -S 'AKIA' -S 'BEGIN PRIVATE KEY' --oneline | hea
 ```
 
 **자동 추론 규칙:**
-- `name`: package.json의 name 또는 디렉토리명, 한글명 제안 가능
-- `slug`: name에서 영문 소문자 + 하이픈으로 변환. **반드시 `^[a-z0-9-]+$` 만족해야 한다**(마켓 submit이 이 정규식으로 검증 → 위반 시 등록 단계에서 400 거부). 대문자·언더스코어·공백·특수문자가 있으면 변환하고, 기존 config의 slug가 규칙 위반이면 경고하고 교정 제안
+> 📌 **메타 필드(`name`/`slug`/`icon`/`description`/`author`/`version`)는 모든 타입 공통** — headless·url 도 이 규칙을 그대로 쓴다(아래 `app.*` 만 git 전용). headless 는 Step 3 을 건너뛰지만 Step 8 이 이 규칙을 참조한다.
+- `name`: package.json의 name 또는 디렉토리명/레포명, 한글명 제안 가능
+- `slug`: **반드시 `^[a-z0-9-]+$` 만족** (마켓 submit 이 이 정규식으로 검증 → 위반 시 400 거부). 영문 소문자+하이픈으로 변환. 기존 config slug 가 규칙 위반이면 경고+교정 제안.
+  - ⚠️ **영문 소스가 없을 때(한글 name/README 뿐)**: ① GitHub remote 레포명에서 추출(`git remote get-url origin`) → ② 그래도 없으면 의미 기반 영문 slug 를 **제안하고 사용자에게 확정받는다**(임의 확정 금지). slug 는 시크릿 폴더(`svc_<slug>`)·dashboard url·등록 폼에 전파되므로 한 번 정하면 전 구간 동일 사용.
 - `icon`: 프로젝트 성격에 맞는 이모지 제안
-- `description`: README.md 첫 문단 또는 package.json description
+- `description`: README.md 첫 문단 또는 package.json description (둘 다 없으면 README 첫 줄/한글 요약)
 - `app.dir`: Next.js 앱 위치. 루트면 `.`, 하위면 해당 폴더명
 - `app.install`: pnpm-lock.yaml 있으면 `pnpm install --frozen-lockfile`, npm 프로젝트면 `npm ci`
 - `app.build`: package.json scripts.build 확인. `pnpm build`가 기본
@@ -408,9 +431,10 @@ supported-architectures.libc[]=glibc
   "tags": ["선택: 카탈로그 분류용"]
 }
 ```
-- `type`: Step 0 판별 결과를 명시한다 (`"git"` | `"headless"`). 기존 config에 `type`이 없으면 마이그레이션 시 추가. (url은 Step 0에서 종료되어 config를 만들지 않음)
-  - ⚠️ **중요(실제 동작)**: 마켓의 `submit/route.ts`는 **config의 `type`을 읽지 않는다.** 실제 제출 타입은 사용자가 `/submit`에서 **어느 탭(git/headless/url)을 클릭했는지**로 결정된다. config의 `type`은 레지스트리 메타데이터·자기문서용일 뿐. → **Step 9에서 반드시 "타입에 맞는 탭"으로 제출하도록 안내**한다(config에 `type:"headless"`만 넣고 git 탭으로 내면 windmill.scripts 검증을 안 거쳐 의도와 다르게 등록됨).
+- `type`: **자기문서/레지스트리 메타데이터 필드다 — 등록 동작을 바꾸지 않는다.** 실제 제출 타입은 사용자가 `/submit`에서 **어느 탭(git/headless/url)을 클릭하느냐**로만 결정된다(`submit/route.ts`는 config의 `type`을 읽지 않음). 그래도 Step 0 판별 결과를 `"git"`|`"headless"` 로 **항상 명시**한다(카탈로그 메타·문서 일관성). 기존 config에 없으면 마이그레이션 시 추가.
+  - ✅ **그래서 단 하나의 규칙**: config `type` 과 실제 클릭 탭을 **반드시 일치**시킨다. `type:"headless"` 인데 git 탭으로 제출하면 windmill.scripts 검증을 안 거쳐 스크립트가 deploy 안 된 채 등록된다. → Step 9 가 "타입에 맞는 탭" 제출을 명시한다.
 - `tags`: 선택. 카탈로그 노출/검색용.
+- 📌 **메타 필드 추론(`name`/`slug`/`icon`/`description`/`author`/`version`)은 Step 3 "자동 추론 규칙" 을 따른다 — 모든 타입 공통**. headless 는 Step 3 을 건너뛰므로 여기서 그 규칙을 적용한다. 특히 `slug` 는 `^[a-z0-9-]+$` 필수 + 한글뿐이라 영문 소스 없으면 레포명 추출/사용자 확정(Step 3 참조).
 
 #### 8-A. git 타입 — `app` 절
 ```json
@@ -469,18 +493,28 @@ supported-architectures.libc[]=glibc
 }
 ```
 **`windmill.scripts` 필드 처리 (마켓 `submit/route.ts`가 ≥1개 필수로 검증):**
-- `path`: Windmill workspace 내 deploy 경로. `f/<folder>/<name>`(folder scoped) 또는 `u/<user>/<name>`. 같은 path는 새 버전으로 chain됨.
-- `file`: **레포 루트 기준** 소스 파일 경로. headless 권장 레이아웃은 `f/<folder>/*.py`라 `path`와 `file`이 자연히 정렬된다(Step 8b §1).
-- `language`: `python3` | `deno` | `bun` | `go` | `bash`.
+
+⚠️ **헷갈리지 말 것 — 아래 세 경로는 서로 다르다 (베이스라인 실측 혼동 지점):**
+
+| 항목 | 무엇 | 누가 정하나 | 예 |
+|---|---|---|---|
+| **`path`** (스크립트) | Windmill workspace deploy 위치 | **작성자 자유** — `f/<folder>/<name>` (folder scoped) | `f/portal_collector/main` |
+| **`file`** (소스) | 레포 안 **실제 소스 파일 경로**. deploy 시 이 파일 내용을 읽어 올림 | 레포 구조 = **최종(8b① 이동 후) 경로** | `f/portal_collector/main.py` |
+| **시크릿 폴더** | envVars 가 push 되는 Windmill **변수** 폴더 | **마켓 코드가 강제**(`f/svc_<sanitized-slug>/`) — 작성자가 못 바꿈. 스크립트 `path` 폴더와 **무관/다름** | `f/svc_portal_collector/PORTAL_PW` |
+
+- `<folder>` (스크립트 path): 작성자가 정함. **Windmill folder 명은 `[a-zA-Z0-9_]` 만 허용** → slug 의 하이픈·기타문자를 `_` 로 치환한다(시크릿 폴더와 동일 sanitize 규칙). **권장: sanitized-slug 와 동일** (slug `portal-collector` → `f/portal_collector/`). 단 시크릿 폴더는 여기에 `svc_` 접두사가 더 붙어 **다르다**(`f/svc_portal_collector/`) — 일치시키려 하지 말 것.
+- `file`: deploy 시 이 경로의 파일을 읽으므로 **레포에 실제 존재하는 최종 경로**여야 한다. 멀티파일이면 8b① 이동 후 경로(`f/<folder>/<module>.py`). **오타·미존재 시 마켓이 조용히 skip** → 콘솔에 스크립트가 안 보임(침묵 실패).
+- `language`: `python3` | `deno` | `bun` | `go` | `bash`. (`requirements.txt` + `*.py` → `python3`)
 - `summary`/`description`/`schema`: 선택 (schema는 Windmill 자동 폼 + 호출자 검증).
 - ⚠️ **배열 순서: 피의존 모듈 먼저, 엔트리포인트 마지막.** deploy 시 정적 분석이 임포트 대상 path를 참조한다.
 
-#### observability (ADR-0005 등록 게이트 — git·headless 공통, 현재 경고 모드)
-- ADR-0005 등록 게이트가 실행 서비스에 `observability`(로깅·영속화·dashboard)를 요구한다. 검증 위치 주의:
-  - 마켓 `submit/route.ts`(등록 시점)는 이 절을 **검증하지 않는다**(폼의 정적 안내 텍스트뿐).
-  - 단, **`scripts/sync-services.ts`의 `validateObservability()`가 빌드/sync 시점에 검증**한다 — **git(app.dir 보유) 서비스**가 `observability` 누락이면 경고 출력(`⚠️ observability 절 누락 — ADR-0005 등록 게이트 규칙`). 현재 **경고 모드**(차단 X), 강제 모드 전환 예정.
-  - **headless(app.dir 없음)는 현재 sync 검증 대상이 아니다** → headless의 observability는 사실상 자기문서/포워드룩킹.
-  - 권장: **git·headless 모두 항상 생성**(git은 sync 경고 회피, headless는 강제 모드 대비 + 자기문서화).
+#### observability (ADR-0005 등록 게이트 — git·headless 공통)
+- **규칙: git·headless 모두 `observability` 절을 항상 생성한다.** (예외 없음 — 아래 검증 현황과 무관하게 생성)
+  - git=`persistence:"logrotate"` 또는 `"cloud-db"`, headless=`persistence:"windmill-history"`.
+- "검증도 안 하는데 왜 넣나?" — 그래도 넣는 이유:
+  - **git**: `scripts/sync-services.ts`의 `validateObservability()`가 빌드/sync 시 누락을 경고한다(현재 경고 모드, 강제 모드 전환 예정) → 미리 넣어 경고 회피.
+  - **headless**: 현재 어느 단계도 검증 안 함(`submit/route.ts`·sync 모두 skip). 그래도 ① 강제 모드 전환 대비 ② 콘솔/문서 메타로 사용 → **넣는다.**
+  - 결론: **빼지 말 것. 항상 생성.**
 - `logging`: 기본 `"required"` (모든 실행 단위에 `event`/`status`/`ts`/`run_id`/`error` 로깅). 면제 시 `"not_required"` + `reason` 필수.
 - `persistence`: git=`"logrotate"`(파일) 또는 `"cloud-db"`, headless=`"windmill-history"`(Windmill 실행 이력).
 - `dashboard.type`: `"embedded"`(마켓 콘솔 렌더) | `"windmill"`(Windmill deep link) | `"external"`. `url`은 기본 `/services/{slug}/console`.
@@ -490,32 +524,64 @@ supported-architectures.libc[]=glibc
 
 ### Step 8b: headless 전용 점검 5패턴 + 시크릿 브리지 [headless 전용]
 
-> headless 타입에서만 수행. `withdrawal-auto-processor` 이관(ADR-0005 후속)에서 검증된 패턴. **이 5패턴은 사용자 코드 로직이라 자동 수정하지 않는다 — 점검·경고·가이드만 제공**하고, 수정은 사용자가 한다(자동 주입은 위험). git 타입의 next.config 자동 주입과 다르다.
+> headless 타입에서만 수행. `withdrawal-auto-processor` 이관(ADR-0005 후속)에서 검증된 패턴.
+>
+> **자동 수정 경계 (혼동 주의):**
+> - **로직은 자동 수정 금지** — `get_secret` 헬퍼 삽입, 시크릿 읽기 코드 교체, import 재작성, 파일 이동은 **점검·경고·가이드(정확한 before/after)만** 제공하고 **사용자가** 직접 한다(자동 주입은 위험).
+> - **단, 기계적·안전한 한 줄은 자동화 OK** — `requirements.txt` 에 `wmill` 추가(③)는 에이전트가 직접 해도 된다.
+> - ①·③ 은 "경고만"이 아니라 **등록·실행에 사실상 필수인 구조 요구사항**이다. "가이드만 준다"는 *수정을 누가 하느냐*(사용자)의 뜻이지 *안 해도 된다*는 뜻이 아니다 — 안 하면 deploy/실행이 깨진다.
 >
 > ⚠️ **적용 범위**: 이 5패턴은 **Python(+Playwright)** headless 기준이다(`windmill.scripts[].language: "python3"`). language가 `deno`/`bun`/`go`/`bash`면 해당 언어에 맞는 항목만 적용하고, `requirements.txt`·`wmill` pip 점검(③) 등 Python 전용 항목은 건너뛴다(워크스페이스 import·top-level import·시크릿 브리지 개념은 언어 무관 동일).
 
-**① 레포 레이아웃 = Windmill 경로 (멀티파일일 때만)**
-- ⚠️ **단일 파일 서비스는 `f/` 레이아웃이 필요 없다.** `file: "scripts/run.py"` + `path: "f/<folder>/run"` 처럼 소스 경로와 workspace 경로가 달라도 마켓이 정상 deploy한다(`file`=레포 내 소스, `path`=workspace 배포 위치).
-- **멀티파일(모듈 간 workspace import) 서비스만** 소스를 `f/<folder>/`에 그대로 배치한다. 그래야 workspace import(`from f.<folder>.<module> import x`)가 로컬 실행에서도 동일 동작(Python namespace package — `__init__.py` 불필요).
-- 점검: 멀티파일인데 `f/` 레이아웃이 아니면 경고. **단일 파일이면 이 항목은 N/A** (f/로 옮기라고 강요하지 말 것).
+**① 레포 레이아웃 = Windmill 경로**
+
+먼저 **단일/멀티 판정:**
+- **단일 파일** (다른 로컬 모듈을 import 안 함) → `f/` 레이아웃 **불필요**. `file: "scripts/run.py"` + `path: "f/<folder>/run"` 처럼 소스·deploy 경로가 달라도 마켓이 정상 deploy. **이 항목 N/A — 옮기라고 강요 말 것.**
+- **멀티파일** (엔트리포인트가 같은 레포의 다른 `.py` 를 import — 예: `main.py` 가 `portal.py`/`report.py` import) → 아래 구조 변경 **필수**(안 하면 deploy 시 의존 모듈 미materialize → 런타임 `ModuleNotFoundError`).
+
+**멀티파일 구조 변경** (= 등록 필수. "자동수정 금지"는 *사용자가 한다*는 뜻 — 에이전트는 정확한 before/after 제시):
+1. 모듈 소스를 **`f/<folder>/` 아래로 이동**.
+2. import 를 **workspace import 로 재작성**: `from f.<folder>.<module> import x`.
+   - 핵심: Python namespace package 라 **로컬(레포 루트에서 실행)·워커 양쪽 동일 동작** → 로컬이 안 깨진다(`__init__.py`·`sys.path` 조작 불필요. 단 **레포 루트 기준** 실행).
+   ```
+   # before (로컬 전용 — deploy 시 portal 모듈 미materialize)
+   repo/main.py     →  from portal import login
+   repo/portal.py
+   # after (로컬·워커 양쪽 동작)
+   repo/f/collector/main.py    →  from f.collector.portal import login
+   repo/f/collector/portal.py
+   ```
+3. `windmill.scripts[].file` 을 **이동 후 경로**(`f/<folder>/*.py`)로 적는다.
+- ⚠️ 이 import 를 `try/except` 로 감싸지 말 것(②와 동일 — 정적 분석 무력화).
 
 **② workspace import·`import wmill`은 top-level (try/except 금지)**
 - ⚠️ workspace import나 `import wmill`을 `try/except`로 감싸면 Windmill 정적 분석이 무력화되어 의존 모듈/`wmill` 패키지가 워커 샌드박스에 설치되지 않는다 (런타임 `ModuleNotFoundError` — 실측, 2026-06-05).
 - 스캔: `import wmill`/`from f.` 임포트가 `try:` 블록 안에 있으면 경고하고 top-level로 올리도록 안내.
 
 **③ 시크릿: `get_secret` 패턴 (Windmill 변수 우선 + env 폴백) + `requirements.txt`에 `wmill` 명시**
-- 파일 기반 시크릿(`secrets/*.json`)은 키 단위로 분해해 등록 폼 envVars로 옮긴다(로컬 개발은 env 폴백으로 유지). 권장 헬퍼:
+- 파일 기반 시크릿을 **키 단위로 분해**해 등록 폼 envVars 로 옮긴다(로컬 개발은 env 폴백 유지).
+- 🔑 **이름 불변식 (어긋나면 런타임 시크릿 미해결 → 실행 실패)** — 아래 셋은 **글자까지 동일**해야 한다:
+  ```
+  /submit envVars 폼의 키  ==  get_secret("KEY") 의 인자  ==  f/svc_<slug>/KEY 의 접미사
+  ```
+  - 권장 표기: **UPPER_SNAKE_CASE**.
+  - JSON 시크릿은 **leaf 키마다 envVar 1개**. 예: `secrets/portal.json {"username":..,"password":..}` → `PORTAL_USERNAME`, `PORTAL_PASSWORD`.
+  - 비-JSON 단일값 파일(`.txt`/`.token`)은 **파일=키 1개**. 예: `secrets/admin_token.txt` → `ADMIN_TOKEN`.
+  - 사용자에게 **분해 매핑표**(원본 파일·키 → envVar 키 이름)를 만들어 보여주고 확정받는다.
+- 권장 헬퍼:
   ```python
   import wmill, os   # ⚠️ top-level (②). try/except 로 감싸지 말 것
+  SLUG_FOLDER = "svc_<sanitized-slug>"   # slug 의 [a-zA-Z0-9_] 외 문자 → _
   def get_secret(key: str) -> str:
       try:
-          val = wmill.get_variable(f"f/svc_<sanitized-slug>/{key}")
+          val = wmill.get_variable(f"f/{SLUG_FOLDER}/{key}")
           if val: return val
       except Exception: pass            # 로컬(Windmill 미설정) → env 폴백
       if v := os.environ.get(key): return v
       raise RuntimeError(f"시크릿 {key} 없음")
+  # 호출 예: get_secret("PORTAL_PASSWORD")  ← 폼 키·변수 접미사와 동일 이름
   ```
-- `requirements.txt`에 `wmill`이 선언돼 있는지 점검(없으면 워커가 설치 안 함).
+- `requirements.txt`에 `wmill` 선언 점검(없으면 워커가 설치 안 함 — 에이전트가 한 줄 추가 OK).
 - 갱신형 토큰(OAuth refresh 등)은 `wmill.set_variable()`로 역기록(워커 샌드박스는 ephemeral — 파일에 써도 사라짐).
 
 **④ Playwright면 `headless=True` + `/usr/bin/chromium` + 샌드박스 off**
