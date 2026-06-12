@@ -60,42 +60,26 @@ cd ..
 > 💡 v3에는 더 이상 nested `bmad-submodule`이 없습니다. 업데이트 후
 > `rentre-agents/bmad-submodule` 디렉토리는 사라집니다.
 
-### Step 2: 죽은 BMAD 잔재 정리
-
-v2에서 생성된 심링크/설정은 이제 깨진 링크입니다. 제거하세요.
-
-```bash
-cd ~/my-project
-
-# 프로젝트 스킬 심링크 제거 (bmad/gds/wds/fsd)
-rm -rf .claude/skills/bmad-* .claude/skills/gds-* .claude/skills/wds* \
-       .claude/skills/applying-fsd-architecture 2>/dev/null
-
-# _bmad 심링크, 프로파일 제거
-rm -rf _bmad _bmad-output .claude/bmad-profile.json 2>/dev/null
-```
-
-확인:
-
-```bash
-# 깨진 심링크가 남아있지 않은지
-find .claude/skills -type l ! -exec test -e {} \; -print 2>/dev/null
-```
-
-### Step 3: v3 install.sh 실행
+### Step 2: v3 install.sh 실행
 
 ```bash
 bash rentre-agents/install.sh
 ```
 
-install.sh가 수행하는 작업:
+install.sh(v0.10.1+)가 수행하는 작업:
 1. **superpowers 플러그인 글로벌 설치** — `obra/superpowers-marketplace` 마켓플레이스 등록 + `superpowers` 플러그인 설치(user 스코프). 이미 있으면 건너뜀.
-2. 프로젝트 커맨드 설치 (`.claude/commands/rentre/`)
-3. 업데이트 체크 hook 등록
+2. **레거시 BMAD 잔재 자동 정리** — v2의 깨진 스킬 심링크(`bmad-*`, `gds-*`, `wds*`, `applying-fsd-architecture`), `_bmad`, `_bmad-output`, `.claude/bmad-profile.json` 제거.
+3. 프로젝트 커맨드 설치 (`.claude/commands/rentre/`)
+4. 업데이트 체크 hook 등록
+
+> 💡 v0.10.1부터 잔재 정리가 자동입니다. 수동으로 확인하려면:
+> ```bash
+> find .claude/skills -type l ! -exec test -e {} \; -print 2>/dev/null   # 깨진 심링크 (없어야 정상)
+> ```
 
 > 프리셋/프레임워크 선택 메뉴는 더 이상 없습니다. (`--preset`은 무시됨)
 
-### Step 4: .gitignore 정리
+### Step 3: .gitignore 정리
 
 v2에서 추가했던 BMAD 관련 항목을 제거합니다.
 
@@ -110,14 +94,14 @@ v2에서 추가했던 BMAD 관련 항목을 제거합니다.
 # _bmad-output
 ```
 
-### Step 5: 변경사항 커밋
+### Step 4: 변경사항 커밋
 
 ```bash
 git add .gitignore .gitmodules rentre-agents
 git commit -m "chore: rentre-agents v3 마이그레이션 (BMAD → superpowers 플러그인)"
 ```
 
-### Step 6: 스킬 활성화
+### Step 5: 스킬 활성화
 
 Claude Code에서 직접 입력:
 
