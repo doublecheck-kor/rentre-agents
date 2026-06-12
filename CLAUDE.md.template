@@ -56,6 +56,8 @@ business/      COO, Product(3), Agile(1), Marketing(3), Sales(3), Ops(3) = 14명
 | 평일 09:03 | 데일리 브리핑 (캘린더) → Slack DM |
 | 평일 08-20시 매시 | ADR 모니터링 → 멘션 감지 시 Slack DM |
 | 매주 금 16:00 | 워크플로우 발굴 (반복 업무 패턴 → 자동화 후보) → Slack DM |
+| 매주 금 08:00 | Tech WIP/리드타임 리포트 (개발 챕터) → Notion |
+| 매주 월 08:00 | 제품 WIP/리드타임 리포트 (제품 부문) → Slack DM + Notion |
 
 ## 설치 구조
 ```

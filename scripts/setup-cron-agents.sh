@@ -15,6 +15,8 @@ MARKER_MARKET="# rentre-cron-market"
 MARKER_DAILY="# rentre-cron-daily"
 MARKER_ADR="# rentre-cron-adr"
 MARKER_DISCOVERY="# rentre-cron-discovery"
+MARKER_TECH_WIP="# rentre-cron-tech-wip"
+MARKER_PRODUCT_WIP="# rentre-cron-product-wip"
 ALL_MARKERS="rentre-cron-"
 
 # claude 풀패스 감지
@@ -46,7 +48,9 @@ NEW_CRONS="$EXISTING
 47 8 * * 1-5 cd $AGENT_DIR && $CLAUDE_BIN -p \"\$(cat $PROMPTS_DIR/market-news.rendered.md)\" --allowedTools 'WebSearch,mcp__claude_ai_Slack__slack_send_message' >> $LOGS_DIR/market-news.log 2>&1 $MARKER_MARKET
 3 9 * * 1-5 cd $AGENT_DIR && $CLAUDE_BIN -p \"\$(cat $PROMPTS_DIR/daily-briefing.rendered.md)\" --allowedTools 'WebSearch,mcp__claude_ai_Google_Calendar__*,mcp__claude_ai_Slack__slack_send_message' >> $LOGS_DIR/daily-briefing.log 2>&1 $MARKER_DAILY
 7 8-20 * * 1-5 cd $AGENT_DIR && $CLAUDE_BIN -p \"\$(cat $PROMPTS_DIR/adr-monitor.rendered.md)\" --allowedTools 'mcp__claude_ai_Notion__*,mcp__claude_ai_Slack__slack_send_message' >> $LOGS_DIR/adr-monitor.log 2>&1 $MARKER_ADR
-0 16 * * 5 cd $AGENT_DIR && harness-run workflow-discovery --no-alert --timeout 900 -- $CLAUDE_BIN -p \"\$(cat $PROMPTS_DIR/workflow-discovery.rendered.md)\" --allowedTools 'Task,Bash,mcp__claude_ai_Slack__*,mcp__claude_ai_Notion__*,mcp__claude_ai_Google_Calendar__*,Read,Write' >> $LOGS_DIR/workflow-discovery.log 2>&1 $MARKER_DISCOVERY"
+0 16 * * 5 cd $AGENT_DIR && harness-run workflow-discovery --no-alert --timeout 900 -- $CLAUDE_BIN -p \"\$(cat $PROMPTS_DIR/workflow-discovery.rendered.md)\" --allowedTools 'Task,Bash,mcp__claude_ai_Slack__*,mcp__claude_ai_Notion__*,mcp__claude_ai_Google_Calendar__*,Read,Write' >> $LOGS_DIR/workflow-discovery.log 2>&1 $MARKER_DISCOVERY
+0 8 * * 5 cd $AGENT_DIR && $CLAUDE_BIN -p \"\$(cat $PROMPTS_DIR/tech-wip-report.md)\" --allowedTools 'mcp__claude_ai_Notion__*' >> $LOGS_DIR/tech-wip-report.log 2>&1 $MARKER_TECH_WIP
+0 8 * * 1 cd $AGENT_DIR && $CLAUDE_BIN -p \"\$(cat $PROMPTS_DIR/product-wip-report.md)\" --allowedTools 'mcp__claude_ai_Notion__*,mcp__claude_ai_Slack__slack_send_message' >> $LOGS_DIR/product-wip-report.log 2>&1 $MARKER_PRODUCT_WIP"
 
 echo "$NEW_CRONS" | crontab -
 
@@ -60,6 +64,8 @@ echo "  데일리 브리핑:    평일 09:03"
 echo "  ADR 모니터링:     평일 08-20시 매시 :07"
 # shadow phase 검증(2-4주) 후 --no-alert 제거하면 실패 시 Slack 알림 활성화
 echo "  워크플로우 발굴:   매주 금요일 16:00 (shadow)"
+echo "  Tech WIP 리포트:  매주 금요일 08:00 (개발 챕터 → Notion)"
+echo "  제품 WIP 리포트:  매주 월요일 08:00 (제품 부문 → Slack DM + Notion)"
 echo ""
 echo "  로그: $LOGS_DIR/"
 echo "  제거: $0 --remove"
