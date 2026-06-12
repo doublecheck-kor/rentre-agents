@@ -55,10 +55,9 @@ cd "$RENTRE_DIR" && git log -1 --format='%h %s'
 
 ```bash
 cd "$RENTRE_DIR"
-git pull --recurse-submodules
-# 서브모듈까지 강제로 맞추고 싶다면:
-git submodule update --init --recursive --remote
+git pull
 ```
+(v3.0부터 nested submodule이 없으므로 `--recurse-submodules`는 불필요)
 
 **git pull 실패 시 대응:**
 - 로컬 변경사항이 있으면 → 사용자에게 알리고 `git stash` 여부 확인
@@ -106,7 +105,7 @@ echo "버전: $OLD_VERSION → $NEW_VERSION"
 ⚠️ **주의사항:**
 - `--yes` 플래그를 반드시 붙여서 대화형 프롬프트 없이 실행
 - 업데이트 중 사용자의 기존 `~/.claude/rentre-config.json`은 건드리지 않음
-- 프로파일(`~/.claude/bmad-profile.json`)이 있으면 자동 복원
+- install.sh가 superpowers 플러그인(글로벌)도 멱등적으로 최신 확인
 - 버전이 같아도 install.sh는 멱등적으로 동작하므로 안전
 
 ---
@@ -199,45 +198,35 @@ Notion MCP가 없으면:
 
 ⚠️ **이 단계의 모든 명령어를 Bash 도구로 직접 실행하세요. 사용자에게 보여주기만 하지 마세요.**
 
-### 7-1. 서브모듈 확인
+### 7-1. 설치 여부 확인
 
 Bash로 실행:
 ```bash
-[ -d "rentre-agents/bmad-submodule" ] && echo "INSTALLED" || echo "NOT_INSTALLED"
+[ -d "rentre-agents" ] && echo "INSTALLED" || echo "NOT_INSTALLED"
 ```
 
 ### 7-2. 설치 실행
 
 **이미 설치된 경우 (INSTALLED):**
-- "rentre-agents가 이미 설치되어 있습니다. 스킬을 다시 설치하겠습니다."
-- 이전 프로파일이 있으면 자동 복원: `bash rentre-agents/install.sh --yes`
-- 없으면 프리셋으로: `bash rentre-agents/install.sh --preset full --yes`
+- "rentre-agents가 이미 설치되어 있습니다. 다시 설치하겠습니다."
+- `bash rentre-agents/install.sh --yes`
 
-⚠️ 기본값은 **프로젝트 로컬 설치**입니다. 글로벌(`~/.claude/commands/rentre/`)에도 설치하려면 `--with-global`을 추가하세요.
+⚠️ 기본값은 **프로젝트 로컬 설치 + superpowers 글로벌 플러그인**입니다. 글로벌 커맨드(`~/.claude/commands/rentre/`)에도 설치하려면 `--with-global`을 추가하세요.
 
 **설치 안 된 경우 (NOT_INSTALLED):**
 
 .git이 있는 프로젝트에서 아래를 **순서대로 Bash로 직접 실행**:
 1. `git submodule add https://github.com/doublecheck-kor/rentre-agents`
-2. `git submodule update --init --recursive`
-3. 사용자에게 역할을 물어보고 프리셋 결정 후: `bash rentre-agents/install.sh --preset {선택} --yes`
+2. `git submodule update --init`
+3. `bash rentre-agents/install.sh --yes`
 
 .git이 없는 경우:
-1. `git clone --recurse-submodules https://github.com/doublecheck-kor/rentre-agents /tmp/rentre-agents`
+1. `git clone https://github.com/doublecheck-kor/rentre-agents /tmp/rentre-agents`
 2. `bash /tmp/rentre-agents/shared-commands/install.sh --global-only --yes`
 3. `rm -rf /tmp/rentre-agents`
 
-### 7-3. 프리셋 선택
-
-install.sh 실행 전에 사용자에게 역할을 물어보세요:
-- "어떤 역할이세요? 백엔드/프론트엔드/PM/게임개발/전체"
-- 백엔드 → `--preset backend --yes`
-- 프론트엔드 → `--preset frontend --yes`
-- PM/기획 → `--preset pm --yes`
-- 게임 개발 → `--preset gamedev --yes`
-- 전체/잘 모르겠으면 → `--preset full --yes`
-
 ⚠️ **반드시 `--yes` 플래그를 붙여야 대화형 프롬프트 없이 자동 실행됩니다.**
+install.sh가 superpowers 플러그인을 글로벌(user 스코프)로 자동 설치합니다 (이미 있으면 건너뜀).
 
 ---
 
@@ -274,13 +263,13 @@ install.sh 실행 전에 사용자에게 역할을 물어보세요:
 [일상 업무]
   /rentre:assistant    만능 비서 (일정, 이메일, Slack, Notion, 마켓 브리핑)
 
-[개발 — BMAD Framework]
-  /bmad-brainstorming  아이디어 탐색, 요구사항 도출
-  /bmad-create-prd     PRD 생성
-  /bmad-dev-story      스토리 구현 (TDD)
-  /bmad-quick-dev      버그 수정, 소규모 작업
-  /bmad-code-review    3-Layer 코드리뷰
-  /bmad-party-mode     멀티에이전트 토론
+[개발 — superpowers]
+  /superpowers:brainstorming               아이디어 탐색, 요구사항 도출
+  /superpowers:writing-plans               구현 계획 작성
+  /superpowers:executing-plans             계획 실행 (체크포인트)
+  /superpowers:test-driven-development     TDD 구현
+  /superpowers:systematic-debugging        체계적 디버깅
+  /superpowers:requesting-code-review      코드리뷰 요청
 
 [분석 & 연동 — Rentre 고유]
   /rentre:adr          기술 의사결정 기록 & 5개 관점 분석

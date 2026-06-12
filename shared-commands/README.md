@@ -1,6 +1,6 @@
 # Rentre Agents
 
-BMAD Framework + Rentre 업무 자동화 AI 에이전트 시스템.
+superpowers 개발 스킬 + Rentre 업무 자동화 AI 에이전트 시스템.
 
 > 전체 문서는 [루트 README.md](../README.md)를 참고하세요.
 
@@ -21,19 +21,20 @@ curl -sL https://raw.githubusercontent.com/doublecheck-kor/rentre-agents/main/sh
 ### 수동
 
 ```bash
-git clone --recurse-submodules https://github.com/doublecheck-kor/rentre-agents.git ~/.rentre-agents
+git clone https://github.com/doublecheck-kor/rentre-agents.git ~/.rentre-agents
 bash ~/.rentre-agents/shared-commands/install.sh
 # Claude Code에서 /rentre:setup 실행
 ```
 
 ## 설치 구조
 
-- **글로벌** (1회): Rentre 커맨드 → `~/.claude/commands/rentre/`
-- **프로젝트별**: BMAD 스킬 → 현재 프로젝트 `.claude/skills/`
+- **글로벌** (1회): superpowers 플러그인 → `~/.claude/plugins/`
+- **글로벌** (1회): Rentre 커맨드 → `~/.claude/commands/rentre/` (`--with-global` 시)
+- **프로젝트별**: Rentre 커맨드 → 현재 프로젝트 `.claude/commands/rentre/`
 
-다른 프로젝트에서 BMAD를 쓰려면 해당 프로젝트에서 install.sh를 한 번 더 실행하면 됩니다.
+개발 스킬(superpowers)은 글로벌 플러그인이라 한 번만 설치하면 모든 프로젝트가 공유합니다.
 
-## Rentre 커맨드 (7개)
+## Rentre 커맨드
 
 | 커맨드 | 설명 |
 |--------|------|
@@ -42,17 +43,19 @@ bash ~/.rentre-agents/shared-commands/install.sh
 | `/rentre:ailab` | AI Lab 쇼케이스 등록 (Notion + Slack) |
 | `/rentre:pr-notion` | Notion 기반 PR 자동 생성 |
 | `/rentre:pr-split` | 큰 변경사항 PR 분리 (600줄 미만) |
+| `/rentre:marketplace` | 마켓플레이스 서비스 등록 준비 |
 | `/rentre:help` | 통합 가이드 |
 | `/rentre:setup` | 초기 설정 (MCP 자동 감지) |
 
-## BMAD 스킬 (109개)
+## 개발 스킬 — superpowers 플러그인
 
-개발 프로세스 전체를 담당. `/bmad-help`로 전체 목록 확인.
+[obra/superpowers](https://github.com/obra/superpowers) 플러그인(글로벌). install.sh가 자동 설치.
+`/superpowers:using-superpowers`로 전체 목록 확인.
 
 ## 업데이트
 
 ```bash
-cd ~/.rentre-agents && git pull --recurse-submodules && ./shared-commands/install.sh
+cd ~/.rentre-agents && git pull && ./shared-commands/install.sh
 ```
 
 ## 제거
