@@ -19,8 +19,8 @@ business/      COO, Product(3), Agile(1), Marketing(3), Sales(3), Ops(3) = 14명
 ```
 
 ## 시스템 구조
-- **개발 프로세스** → BMAD Framework v6 스킬 사용 (`/bmad-*`)
-- **업무 자동화** → Rentre 커맨드 사용 (`/rentre:*`, 8개)
+- **개발 프로세스** → superpowers 플러그인 스킬 사용 (TDD, 디버깅, 브레인스토밍, 플랜 작성/실행, 코드리뷰 등)
+- **업무 자동화** → Rentre 커맨드 사용 (`/rentre:*`)
 
 ## Rentre 커맨드 (~/.claude/commands/rentre/)
 | 커맨드 | 용도 |
@@ -31,20 +31,23 @@ business/      COO, Product(3), Agile(1), Marketing(3), Sales(3), Ops(3) = 14명
 | /rentre:pr-notion | Notion 문서 기반 GitHub PR 자동 생성 |
 | /rentre:pr-split | 변경사항 600줄 미만 PR 단위 분리 |
 | /rentre:marketplace | 마켓플레이스 서비스 등록 준비 — git(Next.js UI)/headless(Windmill)/url 3타입 분기, rentre.config.json 생성 + 검증 |
-| /rentre:help | Rentre + BMAD 통합 가이드 |
-| /rentre:setup | 초기 설정 (MCP 자동 감지 + BMAD 설치) |
+| /rentre:help | Rentre + superpowers 통합 가이드 |
+| /rentre:setup | 초기 설정 (MCP 자동 감지 + superpowers 플러그인 설치) |
 
-## BMAD 주요 스킬 (bmad-submodule/)
+## 개발 스킬 — superpowers 플러그인 (글로벌)
+[obra/superpowers](https://github.com/obra/superpowers) 플러그인을 글로벌(user 스코프)로 설치해 사용한다. install.sh가 `obra/superpowers-marketplace` 마켓플레이스 등록 + 플러그인 설치를 멱등 처리한다.
+
 | 스킬 | 용도 |
 |------|------|
-| /bmad-agent-pm | PRD 작성, 요구사항 발견 |
-| /bmad-agent-architect | 아키텍처 설계 |
-| /bmad-agent-dev | 스토리 구현 |
-| /bmad-code-review | 3-Layer 코드리뷰 |
-| /bmad-brainstorming | 브레인스토밍 |
-| /bmad-party-mode | 멀티에이전트 토론 |
-| /bmad-quick-dev | 빠른 개발 |
-| /bmad-help | BMAD 다음 단계 안내 |
+| /superpowers:brainstorming | 구현 전 요구사항·설계 탐색 |
+| /superpowers:writing-plans | 멀티스텝 작업 구현 계획 작성 |
+| /superpowers:executing-plans | 작성된 계획을 체크포인트와 함께 실행 |
+| /superpowers:test-driven-development | TDD 사이클로 기능/버그 구현 |
+| /superpowers:systematic-debugging | 버그·테스트 실패 체계적 디버깅 |
+| /superpowers:requesting-code-review | 코드리뷰 요청 |
+| /superpowers:finishing-a-development-branch | 작업 완료 후 머지/PR 정리 |
+
+> 전체 스킬: `/superpowers:using-superpowers` 또는 `claude plugin details superpowers@superpowers-marketplace`
 
 ## 크론 자동화 (tmux 백그라운드)
 | 시간 | 내용 |
@@ -57,21 +60,19 @@ business/      COO, Product(3), Agile(1), Marketing(3), Sales(3), Ops(3) = 14명
 ## 설치 구조
 ```
 글로벌 (1회, ~/.claude/)
-  commands/rentre/     ← /rentre:* 커맨드 7개
-  skills/rentre-pr-*   ← PR 스킬 2개
+  plugins/             ← superpowers 플러그인 (obra/superpowers-marketplace, user 스코프)
+  commands/rentre/     ← /rentre:* 커맨드 (--with-global 시)
 
 프로젝트별 (install.sh 실행한 프로젝트)
-  .claude/skills/bmad-* ← BMAD 스킬 109개 (심링크)
-  _bmad/                ← BMAD config (심링크)
+  .claude/commands/rentre/ ← /rentre:* 커맨드
 ```
 
 ## 개발 방법론
-- BMAD Framework v6 기반 개발 워크플로우
-- 워크플로우 샤딩 (step-01 ~ step-N, HALT 메커니즘)
-- 3-Layer 코드리뷰 (Blind Hunter → Edge Case Hunter → Acceptance Auditor)
-- 에이전트 핸드오프 (PM → Architect → Developer 자동 전환)
-- Distillate 시스템 (토큰 최적화)
-- Rentre 브릿지: BMAD 산출물 → Notion 백로그 자동 생성, Slack 알림
+- superpowers 플러그인 기반 개발 워크플로우 (글로벌 플러그인)
+- 브레인스토밍 → 플랜 작성 → 플랜 실행(체크포인트) → TDD 구현 → 코드리뷰
+- 체계적 디버깅: 버그·테스트 실패 시 추측 전 근본 원인 분석
+- 완료 전 검증(verification-before-completion): 성공 주장 전 검증 명령 실행
+- Rentre 브릿지: 산출물 → Notion 백로그 자동 생성, Slack 알림
 
 ## AX 챌린지 역할 체계
 | 역할 | 담당 | 설명 |
@@ -149,5 +150,5 @@ business/      COO, Product(3), Agile(1), Marketing(3), Sales(3), Ops(3) = 14명
 
 ## 전사 배포
 - 설치: `rentre-agents(https://github.com/doublecheck-kor/rentre-agents) 설치하고 /rentre:setup 실행해줘`
-- 글로벌 Rentre 커맨드 + 프로젝트별 BMAD 스킬 자동 설치
-- 업데이트: `cd ~/.rentre-agents && git pull --recurse-submodules && ./shared-commands/install.sh`
+- superpowers 플러그인(글로벌) + Rentre 커맨드 자동 설치
+- 업데이트: `cd ~/.rentre-agents && git pull && ./shared-commands/install.sh`

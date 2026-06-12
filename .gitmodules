@@ -1,4 +1,0 @@
-[submodule "bmad-submodule"]
-	path = bmad-submodule
-	url = https://github.com/OhSeungWan/bmad-submodule.git
-	ignore = dirty

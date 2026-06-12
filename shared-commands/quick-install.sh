@@ -8,7 +8,7 @@
 #
 # 동작:
 #   1. ~/.rentre-agents/ 에 레포 clone (또는 update)
-#   2. install.sh 실행 → 글로벌 Rentre + 현재 프로젝트 BMAD
+#   2. install.sh 실행 → superpowers 플러그인(글로벌) + Rentre 커맨드
 # ============================================
 
 set -e
@@ -30,15 +30,14 @@ fi
 # clone 또는 update
 if [ -d "$INSTALL_DIR" ]; then
     echo "기존 설치 발견. 업데이트합니다..."
-    cd "$INSTALL_DIR" && git pull --recurse-submodules
-    git submodule update --init --recursive
+    cd "$INSTALL_DIR" && git pull
     cd - > /dev/null
 else
     echo "다운로드 중..."
-    git clone --recurse-submodules "$REPO_URL" "$INSTALL_DIR"
+    git clone "$REPO_URL" "$INSTALL_DIR"
 fi
 
-# install.sh 실행 (현재 디렉토리에 BMAD 설치)
+# install.sh 실행 (superpowers 플러그인 글로벌 + Rentre 커맨드 설치)
 chmod +x "$INSTALL_DIR/shared-commands/install.sh"
 bash "$INSTALL_DIR/shared-commands/install.sh"
 

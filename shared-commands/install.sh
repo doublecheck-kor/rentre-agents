@@ -1,25 +1,23 @@
 #!/bin/bash
 # ============================================
-# Rentre Agents 설치 스크립트 v2.0
+# Rentre Agents 설치 스크립트 v3.0
 # ============================================
 # rentre-agents는 프로젝트 내 git submodule로 사용됩니다.
 #
 # 사용법:
-#   bash rentre-agents/install.sh                    ← 대화형 설치
-#   bash rentre-agents/install.sh --preset backend   ← 프리셋 설치
-#   bash rentre-agents/install.sh --preset frontend
-#   bash rentre-agents/install.sh --preset pm
-#   bash rentre-agents/install.sh --preset gamedev
-#   bash rentre-agents/install.sh --preset full
+#   bash rentre-agents/install.sh                    ← 프로젝트 설치
 #   bash rentre-agents/install.sh --global-only      ← 글로벌 커맨드만 (부트스트랩)
 #   bash rentre-agents/install.sh --with-global      ← 프로젝트 + 글로벌 동시 설치
+#   bash rentre-agents/install.sh --yes              ← 대화형 프롬프트 없이 자동
 #   bash rentre-agents/install.sh --remove           ← 제거
 #
-# 설치 구조 (기본: 프로젝트-로컬만):
+# 설치 구조:
+#   글로벌 (1회):       superpowers 플러그인 (obra/superpowers-marketplace, user 스코프)
 #   프로젝트 (.claude/commands/rentre/): 모든 커맨드 (assistant, help, setup, adr, ailab 등)
-#   프로젝트 (.claude/skills/):          BMAD/GDS/WDS/FSD 스킬 (상대 심링크)
-#   프로젝트 (_bmad):                    BMAD config (상대 심링크)
 #   글로벌 (~/.claude/commands/rentre/): --with-global 또는 --global-only 시에만
+#
+# 개발 스킬은 superpowers 플러그인(글로벌)이 제공합니다. (TDD, 디버깅,
+# 브레인스토밍, 플랜 작성/실행, 코드리뷰 등) — 프로젝트별 심링크가 아닙니다.
 # ============================================
 
 set -euo pipefail
@@ -40,10 +38,12 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 SOURCE_DIR="$SCRIPT_DIR/rentre"
 PROJECT_DIR="$(pwd)"
 VERSION_FILE="$REPO_DIR/VERSION"
-BMAD_DIR="$REPO_DIR/bmad-submodule"
-BMAD_SKILLS_DIR="$BMAD_DIR/.claude/skills"
-PROFILE_FILE="$PROJECT_DIR/.claude/bmad-profile.json"
 CONFIG_FILE="$HOME/.claude/rentre-config.json"
+
+# ─── superpowers 플러그인 ─────────────────────────────
+SUPERPOWERS_MARKETPLACE="obra/superpowers-marketplace"
+SUPERPOWERS_MARKETPLACE_NAME="superpowers-marketplace"
+SUPERPOWERS_PLUGIN="superpowers@superpowers-marketplace"
 
 # ─── 색상 (비터미널이면 비활성화) ─────────────────────
 if [ -t 1 ]; then
@@ -58,57 +58,9 @@ else
     GREEN='' YELLOW='' RED='' CYAN='' BOLD='' DIM='' NC=''
 fi
 
-# ─── 글로벌 커맨드 목록 ─────────────────────────────
+# ─── 커맨드 목록 ─────────────────────────────────────
 GLOBAL_COMMANDS=("assistant.md" "help.md" "setup.md")
 PROJECT_COMMANDS=("assistant.md" "help.md" "setup.md" "adr.md" "ailab.md" "_backlog-rules.md" "resume-review.md" "marketplace.md" "pm-weekly-backlog.md")
-
-# ─── BMAD Core 서브카테고리 정의 ─────────────────────
-declare -a BMAD_AGENTS=(
-    bmad-agent-pm bmad-agent-architect bmad-agent-dev
-    bmad-agent-ux-designer bmad-agent-tech-writer
-    bmad-agent-analyst bmad-agent-builder bmad-tea
-)
-declare -a BMAD_PLANNING=(
-    bmad-create-prd bmad-edit-prd bmad-validate-prd bmad-product-brief
-    bmad-create-epics-and-stories bmad-create-story bmad-sprint-planning bmad-sprint-status
-)
-declare -a BMAD_DEVELOPMENT=(
-    bmad-code-review bmad-review-adversarial-general bmad-review-edge-case-hunter
-    bmad-quick-dev bmad-dev-story
-)
-declare -a BMAD_TESTING=(
-    bmad-testarch-test-design bmad-testarch-atdd bmad-testarch-automate
-    bmad-testarch-framework bmad-testarch-ci bmad-testarch-nfr
-    bmad-testarch-test-review bmad-testarch-trace bmad-qa-generate-e2e-tests
-    bmad-teach-me-testing
-)
-declare -a BMAD_ARCHITECTURE=(
-    bmad-create-architecture bmad-create-ux-design
-)
-declare -a BMAD_BUSINESS=(
-    bmad-brainstorming bmad-cis-design-thinking bmad-cis-innovation-strategy
-    bmad-cis-problem-solving bmad-cis-storytelling bmad-cis-agent-brainstorming-coach
-    bmad-cis-agent-design-thinking-coach bmad-cis-agent-creative-problem-solver
-    bmad-cis-agent-innovation-strategist bmad-cis-agent-presentation-master
-    bmad-cis-agent-storyteller bmad-market-research bmad-domain-research
-    bmad-technical-research bmad-retrospective bmad-correct-course
-    bmad-check-implementation-readiness bmad-advanced-elicitation
-)
-declare -a BMAD_DOCUMENTATION=(
-    bmad-document-project bmad-generate-project-context bmad-index-docs
-    bmad-shard-doc bmad-editorial-review-prose bmad-editorial-review-structure
-    bmad-distillator bmad-agent-tech-writer
-)
-declare -a BMAD_QUALITY=(
-    bmad-check-implementation-readiness bmad-correct-course bmad-retrospective
-    bmad-sprint-status
-)
-declare -a BMAD_BUILD_TOOLS=(
-    bmad-module-builder bmad-workflow-builder bmad-bmb-setup
-)
-declare -a BMAD_UTILITIES=(
-    bmad-help bmad-party-mode bmad-checkpoint-preview bmad-prfaq
-)
 
 # ─── 유틸리티 함수 ───────────────────────────────────
 
@@ -132,44 +84,6 @@ sedi() {
         sed -i '' "$@"
     else
         sed -i "$@"
-    fi
-}
-
-# 상대 경로 계산: relative_path <from_dir> <to_file>
-relative_path() {
-    local from_dir="$1"
-    local to_file="$2"
-    python3 -c "import os.path, sys; print(os.path.relpath(sys.argv[2], sys.argv[1]))" "$from_dir" "$to_file" 2>/dev/null \
-        || perl -e 'use File::Spec; print File::Spec->abs2rel($ARGV[1], $ARGV[0])' "$from_dir" "$to_file" 2>/dev/null \
-        || echo "$to_file"
-}
-
-# 심링크 생성 (상대경로, 실패 시 복사 폴백)
-create_link() {
-    local source_path="$1"
-    local target_path="$2"
-    local target_dir
-    target_dir="$(dirname "$target_path")"
-
-    # 이미 존재하면 스킵
-    if [ -e "$target_path" ] || [ -L "$target_path" ]; then
-        return 0
-    fi
-
-    local rel_path
-    rel_path="$(relative_path "$target_dir" "$source_path")"
-
-    if ln -s "$rel_path" "$target_path" 2>/dev/null; then
-        return 0
-    else
-        # 심링크 실패 시 (Windows 등) 복사 폴백
-        if [ -d "$source_path" ]; then
-            cp -r "$source_path" "$target_path"
-        else
-            cp "$source_path" "$target_path"
-        fi
-        LINK_MODE="copy"
-        return 0
     fi
 }
 
@@ -265,135 +179,43 @@ print_mcp_status() {
     echo ""
 }
 
-# 스킬 목록을 배열로 수집 (중복 제거)
-collect_skills() {
-    local -n result_ref=$1
-    shift
-    for skill in "$@"; do
-        local found=false
-        for existing in "${result_ref[@]+"${result_ref[@]}"}"; do
-            if [ "$existing" = "$skill" ]; then
-                found=true
-                break
-            fi
-        done
-        if [ "$found" = false ]; then
-            # 실제 존재하는지 확인
-            if [ -d "$BMAD_SKILLS_DIR/$skill" ]; then
-                result_ref+=("$skill")
-            fi
-        fi
-    done
-}
+# ─── superpowers 플러그인 설치 (글로벌, 멱등) ──────────
 
-# ─── 프레임워크 메뉴 ─────────────────────────────────
-
-show_framework_menu() {
-    local gds_count wds_count bmad_count fsd_count total_count
-    bmad_count=$(ls -d "$BMAD_SKILLS_DIR"/bmad-* 2>/dev/null | wc -l | tr -d ' ')
-    gds_count=$(ls -d "$BMAD_SKILLS_DIR"/gds-* 2>/dev/null | wc -l | tr -d ' ')
-    wds_count=$(ls -d "$BMAD_SKILLS_DIR"/wds* 2>/dev/null | wc -l | tr -d ' ')
-    fsd_count=1
-    total_count=$((bmad_count + gds_count + wds_count + fsd_count))
-
-    echo ""
-    echo -e "  ╔══════════════════════════════════════════════════════╗"
-    echo -e "  ║  ${BOLD}Rentre Agents 설치${NC} — ${CYAN}$(basename "$PROJECT_DIR")${NC}"
-    echo -e "  ╠══════════════════════════════════════════════════════╣"
-    echo -e "  ║"
-
-    print_mcp_status
-
-    echo -e "  ║  ${BOLD}🏗️  프레임워크 선택${NC}"
-    echo -e "  ║  ─────────────────────────────"
-    printf "  ║  ${GREEN}[1]${NC} 🔧 BMAD Core     (웹/앱 개발)         %3d개 스킬\n" "$bmad_count"
-    printf "  ║  ${GREEN}[2]${NC} 🎮 GDS           (게임 개발)           %3d개 스킬\n" "$gds_count"
-    printf "  ║  ${GREEN}[3]${NC} 🎨 WDS           (UX/디자인 시스템)    %3d개 스킬\n" "$wds_count"
-    printf "  ║  ${GREEN}[4]${NC} 📐 FSD           (프론트엔드 아키텍처)   %d개 스킬\n" "$fsd_count"
-    printf "  ║  ${GREEN}[A]${NC} ✅ 전체 설치                          %3d개 스킬\n" "$total_count"
-    echo -e "  ║"
-    echo -e "  ║  💡 여러 개 선택 가능: ${DIM}1,3${NC} 또는 ${DIM}1 3${NC}"
-    echo -e "  ╚══════════════════════════════════════════════════════╝"
-    echo ""
-    echo -ne "  선택 (1-4, A, 또는 조합): "
-}
-
-show_bmad_subcategory_menu() {
-    echo ""
-    echo -e "  ╔══════════════════════════════════════════════════════╗"
-    echo -e "  ║  ${BOLD}BMAD Core — 세부 카테고리 선택${NC}"
-    echo -e "  ╠══════════════════════════════════════════════════════╣"
-    printf "  ║  ${GREEN}[1]${NC} 👥 에이전트        PM, 아키텍트, 개발자 등  %2d개\n" "${#BMAD_AGENTS[@]}"
-    printf "  ║  ${GREEN}[2]${NC} 📋 기획/스프린트   PRD, 에픽, 스토리        %2d개\n" "${#BMAD_PLANNING[@]}"
-    printf "  ║  ${GREEN}[3]${NC} 💻 개발/코드리뷰   quick-dev, 코드리뷰      %2d개\n" "${#BMAD_DEVELOPMENT[@]}"
-    printf "  ║  ${GREEN}[4]${NC} 🧪 테스트/QA      ATDD, CI, 프레임워크     %2d개\n" "${#BMAD_TESTING[@]}"
-    printf "  ║  ${GREEN}[5]${NC} 🏛️  아키텍처       기술 설계, UX 설계        %2d개\n" "${#BMAD_ARCHITECTURE[@]}"
-    printf "  ║  ${GREEN}[6]${NC} 💼 비즈니스/전략   브레인스토밍, 리서치      %2d개\n" "${#BMAD_BUSINESS[@]}"
-    printf "  ║  ${GREEN}[7]${NC} 📝 문서화         프로젝트 문서, 편집 리뷰  %2d개\n" "${#BMAD_DOCUMENTATION[@]}"
-    printf "  ║  ${GREEN}[8]${NC} ✅ 품질/회고       구현 준비 확인, 회고      %2d개\n" "${#BMAD_QUALITY[@]}"
-    printf "  ║  ${GREEN}[9]${NC} 🔨 빌드 도구      모듈, 워크플로우 빌더     %2d개\n" "${#BMAD_BUILD_TOOLS[@]}"
-    printf "  ║  ${GREEN}[0]${NC} 📚 교육/유틸      초기화, 도움말, 파티모드  %2d개\n" "${#BMAD_UTILITIES[@]}"
-    echo -e "  ║  ${GREEN}[A]${NC} ✅ BMAD 전체"
-    echo -e "  ║"
-    echo -e "  ║  💡 추천 조합:"
-    echo -e "  ║  ${DIM}• 백엔드 개발: 1,2,3,4,5${NC}"
-    echo -e "  ║  ${DIM}• 프론트엔드:  1,2,3,5${NC}"
-    echo -e "  ║  ${DIM}• PM/기획:     1,2,6,7${NC}"
-    echo -e "  ╚══════════════════════════════════════════════════════╝"
-    echo ""
-    echo -ne "  선택 (0-9, A, 또는 조합): "
-}
-
-# 선택 문자열 파싱 → 배열 ("1,3 4" → "1" "3" "4")
-parse_selections() {
-    local input="$1"
-    echo "$input" | tr ',' ' ' | tr -s ' '
-}
-
-# ─── 스킬 설치 로직 ──────────────────────────────────
-
-install_skills() {
-    local -a skills_to_install=("$@")
-    local target_dir="$PROJECT_DIR/.claude/skills"
-    mkdir -p "$target_dir"
-
-    local installed=0
-    local skipped=0
-
-    for skill in "${skills_to_install[@]}"; do
-        local source="$BMAD_SKILLS_DIR/$skill"
-        local target="$target_dir/$skill"
-
-        if [ ! -d "$source" ]; then
-            skipped=$((skipped + 1))
-            continue
-        fi
-
-        if [ -e "$target" ] || [ -L "$target" ]; then
-            # 기존 심링크/디렉토리 제거 후 재생성
-            rm -rf "$target"
-        fi
-
-        create_link "$source" "$target"
-        installed=$((installed + 1))
-    done
-
-    echo -e "  ${GREEN}[OK]${NC} 스킬 ${installed}개 설치 완료 (스킵 ${skipped}개)"
-}
-
-install_bmad_config() {
-    local target="$PROJECT_DIR/_bmad"
-    local source="$BMAD_DIR/_bmad"
-
-    if [ ! -d "$source" ]; then
-        echo -e "  ${YELLOW}[!]${NC} _bmad 디렉토리를 찾을 수 없습니다"
-        return 1
+install_superpowers() {
+    # claude CLI 없으면 스킵 (메인에서 이미 검사하지만 방어적으로)
+    if ! command -v claude &>/dev/null; then
+        echo -e "  ${YELLOW}[!]${NC} claude CLI 없음 — superpowers 설치 건너뜀"
+        return 0
     fi
 
-    [ -e "$target" ] || [ -L "$target" ] && rm -rf "$target"
-    create_link "$source" "$target"
-    echo -e "  ${GREEN}[OK]${NC} _bmad 설정 링크 완료"
+    # 1) 마켓플레이스 등록 (이미 있으면 건너뜀)
+    if claude plugin marketplace list 2>/dev/null | grep -q "$SUPERPOWERS_MARKETPLACE_NAME"; then
+        echo -e "  ${DIM}superpowers 마켓플레이스 이미 등록됨${NC}"
+    else
+        if claude plugin marketplace add "$SUPERPOWERS_MARKETPLACE" >/dev/null 2>&1; then
+            echo -e "  ${GREEN}[OK]${NC} superpowers 마켓플레이스 등록"
+        else
+            echo -e "  ${YELLOW}[!]${NC} 마켓플레이스 등록 실패"
+            echo -e "      수동 설치: ${CYAN}claude plugin marketplace add $SUPERPOWERS_MARKETPLACE${NC}"
+            return 0
+        fi
+    fi
+
+    # 2) 플러그인 설치 (이미 있으면 건너뜀, user=글로벌 스코프)
+    if claude plugin list 2>/dev/null | grep -q "$SUPERPOWERS_PLUGIN"; then
+        echo -e "  ${DIM}superpowers 플러그인 이미 설치됨 (글로벌)${NC}"
+    else
+        if claude plugin install "$SUPERPOWERS_PLUGIN" --scope user >/dev/null 2>&1; then
+            echo -e "  ${GREEN}[OK]${NC} superpowers 플러그인 설치 (글로벌/user 스코프)"
+        else
+            echo -e "  ${YELLOW}[!]${NC} 플러그인 설치 실패"
+            echo -e "      수동 설치: ${CYAN}claude plugin install $SUPERPOWERS_PLUGIN --scope user${NC}"
+            return 0
+        fi
+    fi
 }
+
+# ─── 커맨드 설치 ─────────────────────────────────────
 
 install_project_commands() {
     local target_dir="$PROJECT_DIR/.claude/commands/rentre"
@@ -437,188 +259,6 @@ install_global_commands() {
     fi
 }
 
-# ─── 프로파일 저장/로드 ──────────────────────────────
-
-save_profile() {
-    local frameworks_json="$1"
-    local subcategories_json="$2"
-    local skill_count="$3"
-
-    local version
-    version=$(cat "$VERSION_FILE" 2>/dev/null | tr -d '[:space:]' || echo "unknown")
-    local platform="unknown"
-    case "$OSTYPE" in
-        darwin*)  platform="darwin" ;;
-        linux*)   platform="linux" ;;
-        msys*|cygwin*|mingw*) platform="windows" ;;
-    esac
-    local today
-    today=$(date +%Y-%m-%d)
-
-    # MCP 상태 JSON
-    local mcp_json="{"
-    local first=true
-    for name in "Notion" "Slack" "Google Calendar" "Gmail" "Linear" "Figma" "GitHub"; do
-        local key
-        key=$(echo "$name" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
-        local val="false"
-        [ "${MCP_STATUS[$name]}" = "connected" ] && val="true"
-        if [ "$first" = true ]; then
-            first=false
-        else
-            mcp_json+=","
-        fi
-        mcp_json+="\"$key\":$val"
-    done
-    mcp_json+="}"
-
-    mkdir -p "$(dirname "$PROFILE_FILE")"
-    cat > "$PROFILE_FILE" << EOPROFILE
-{
-  "installed_at": "$today",
-  "rentre_agents_version": "$version",
-  "platform": "$platform",
-  "link_mode": "$LINK_MODE",
-  "mcp": $mcp_json,
-  "frameworks": $frameworks_json,
-  "bmad_subcategories": $subcategories_json,
-  "skill_count": $skill_count
-}
-EOPROFILE
-    echo -e "  ${GREEN}[OK]${NC} 프로파일 저장 → .claude/bmad-profile.json"
-}
-
-load_profile() {
-    if [ ! -f "$PROFILE_FILE" ]; then
-        return 1
-    fi
-
-    local skill_count="unknown"
-    if command -v jq &>/dev/null; then
-        skill_count=$(jq -r '.skill_count // "unknown"' "$PROFILE_FILE" 2>/dev/null)
-    else
-        skill_count=$(grep '"skill_count"' "$PROFILE_FILE" | sed 's/[^0-9]//g')
-    fi
-
-    # --yes 모드: 자동으로 이전 설정 사용
-    if [ "$AUTO_YES" = true ]; then
-        echo -e "  ${CYAN}이전 설정 사용 (${skill_count}개 스킬, --yes)${NC}"
-        return 0
-    fi
-
-    echo ""
-    echo -e "  ${CYAN}이전 설정이 있습니다 (${skill_count}개 스킬)${NC}"
-    echo ""
-    echo -e "  ${GREEN}[1]${NC} 이전 설정으로 빠른 설치"
-    echo -e "  ${GREEN}[2]${NC} 새로 선택"
-    echo ""
-    echo -ne "  선택 (1/2): "
-    read -r choice
-
-    if [ "$choice" = "1" ]; then
-        return 0  # 이전 설정 사용
-    else
-        return 1  # 새로 선택
-    fi
-}
-
-reinstall_from_profile() {
-    local -a skills_to_install=()
-
-    # 프레임워크별 스킬 수집 (jq 우선, 없으면 sed 폴백)
-    local frameworks
-    if command -v jq &>/dev/null; then
-        frameworks=$(jq -r '.frameworks[]' "$PROFILE_FILE" 2>/dev/null)
-    else
-        # 포터블 sed: "frameworks": ["a","b"] → a\nb
-        frameworks=$(sed -n 's/.*"frameworks"[[:space:]]*:[[:space:]]*\[\([^]]*\)\].*/\1/p' "$PROFILE_FILE" \
-            | sed 's/","/\n/g' | sed 's/[" ]//g')
-    fi
-
-    [ -z "$frameworks" ] && return 1
-
-    while IFS= read -r fw; do
-        [ -z "$fw" ] && continue
-        case "$fw" in
-            "bmad-core")
-                local subcats
-                if command -v jq &>/dev/null; then
-                    subcats=$(jq -r '.bmad_subcategories[]' "$PROFILE_FILE" 2>/dev/null)
-                else
-                    subcats=$(sed -n 's/.*"bmad_subcategories"[[:space:]]*:[[:space:]]*\[\([^]]*\)\].*/\1/p' "$PROFILE_FILE" \
-                        | sed 's/","/\n/g' | sed 's/[" ]//g')
-                fi
-                while IFS= read -r subcat; do
-                    [ -z "$subcat" ] && continue
-                    add_bmad_subcategory_skills skills_to_install "$subcat"
-                done <<< "$subcats"
-                ;;
-            "gds")
-                local gds_skills
-                while IFS= read -r s; do
-                    [ -n "$s" ] && collect_skills skills_to_install "$s"
-                done < <(for d in "$BMAD_SKILLS_DIR"/gds-*; do [ -d "$d" ] && echo "${d##*/}"; done)
-                ;;
-            "wds")
-                local wds_skills
-                while IFS= read -r s; do
-                    [ -n "$s" ] && collect_skills skills_to_install "$s"
-                done < <(for d in "$BMAD_SKILLS_DIR"/wds*; do [ -d "$d" ] && echo "${d##*/}"; done)
-                ;;
-            "fsd")
-                collect_skills skills_to_install "applying-fsd-architecture"
-                ;;
-        esac
-    done <<< "$frameworks"
-
-    if [ ${#skills_to_install[@]} -eq 0 ]; then
-        echo -e "  ${YELLOW}[!]${NC} 프로파일에서 스킬을 복원할 수 없습니다."
-        return 1
-    fi
-
-    install_skills "${skills_to_install[@]}"
-    return 0
-}
-
-add_bmad_subcategory_skills() {
-    local -n target_arr=$1
-    local category="$2"
-    case "$category" in
-        agents)       collect_skills target_arr "${BMAD_AGENTS[@]}" ;;
-        planning)     collect_skills target_arr "${BMAD_PLANNING[@]}" ;;
-        development)  collect_skills target_arr "${BMAD_DEVELOPMENT[@]}" ;;
-        testing)      collect_skills target_arr "${BMAD_TESTING[@]}" ;;
-        architecture) collect_skills target_arr "${BMAD_ARCHITECTURE[@]}" ;;
-        business)     collect_skills target_arr "${BMAD_BUSINESS[@]}" ;;
-        documentation) collect_skills target_arr "${BMAD_DOCUMENTATION[@]}" ;;
-        quality)      collect_skills target_arr "${BMAD_QUALITY[@]}" ;;
-        build_tools)  collect_skills target_arr "${BMAD_BUILD_TOOLS[@]}" ;;
-        utilities)    collect_skills target_arr "${BMAD_UTILITIES[@]}" ;;
-    esac
-}
-
-# ─── 기존 스킬 정리 ──────────────────────────────────
-
-cleanup_existing_skills() {
-    local target_dir="$PROJECT_DIR/.claude/skills"
-    [ -d "$target_dir" ] || return 0
-
-    local removed=0
-    local _old_nullglob
-    shopt -s nullglob
-    for pattern in 'bmad-*' 'gds-*' 'wds*' 'applying-fsd-architecture'; do
-        for item in "$target_dir"/$pattern; do
-            rm -rf "$item"
-            removed=$((removed + 1))
-        done
-    done
-    shopt -u nullglob
-
-    if [ "$removed" -gt 0 ]; then
-        echo -e "  ${DIM}기존 스킬 ${removed}개 정리 완료${NC}"
-    fi
-}
-
 # ─── 설치 검증 ────────────────────────────────────────
 
 verify_installation() {
@@ -643,7 +283,7 @@ verify_installation() {
 
     # 프로젝트 커맨드 확인
     local proj_cmd_dir="$PROJECT_DIR/.claude/commands/rentre"
-    if [ -d "$proj_cmd_dir" ]; then
+    if [ "${GLOBAL_ONLY:-false}" = false ] && [ -d "$proj_cmd_dir" ]; then
         for cmd in "${PROJECT_COMMANDS[@]}"; do
             if [ -f "$proj_cmd_dir/$cmd" ]; then
                 echo -e "  ${GREEN}✅${NC} 프로젝트 커맨드: $cmd"
@@ -654,33 +294,11 @@ verify_installation() {
         done
     fi
 
-    # 스킬 심링크 확인 (깨진 링크 검사)
-    local skills_dir="$PROJECT_DIR/.claude/skills"
-    local broken=0
-    if [ -d "$skills_dir" ]; then
-        for link in "$skills_dir"/*; do
-            [ -L "$link" ] || continue
-            if [ ! -e "$link" ]; then
-                echo -e "  ${RED}❌${NC} 깨진 심링크: $(basename "$link")"
-                broken=$((broken + 1))
-                errors=$((errors + 1))
-            fi
-        done
-        if [ "$broken" -eq 0 ]; then
-            local skill_count
-            skill_count=$(ls -d "$skills_dir"/* 2>/dev/null | wc -l | tr -d ' ')
-            echo -e "  ${GREEN}✅${NC} 스킬 심링크 ${skill_count}개 정상"
-        fi
-    fi
-
-    # _bmad 확인
-    if [ -e "$PROJECT_DIR/_bmad" ]; then
-        echo -e "  ${GREEN}✅${NC} _bmad 설정"
-    fi
-
-    # 프로파일 확인
-    if [ -f "$PROFILE_FILE" ]; then
-        echo -e "  ${GREEN}✅${NC} 프로파일 저장됨"
+    # superpowers 플러그인 확인
+    if command -v claude &>/dev/null && claude plugin list 2>/dev/null | grep -q "$SUPERPOWERS_PLUGIN"; then
+        echo -e "  ${GREEN}✅${NC} superpowers 플러그인 (글로벌)"
+    else
+        echo -e "  ${YELLOW}⚠️${NC}  superpowers 플러그인 미확인 — 수동 설치 필요할 수 있음"
     fi
 
     if [ "$errors" -gt 0 ]; then
@@ -700,33 +318,12 @@ do_remove() {
     echo -e "${YELLOW}Rentre Agents 제거 중...${NC}"
     echo ""
 
-    # 프로젝트 스킬 제거
-    local skills_dir="$PROJECT_DIR/.claude/skills"
-    if [ -d "$skills_dir" ]; then
-        shopt -s nullglob
-        for pattern in 'bmad-*' 'gds-*' 'wds*' 'applying-fsd-architecture'; do
-            for item in "$skills_dir"/$pattern; do
-                rm -rf "$item"
-            done
-        done
-        shopt -u nullglob
-        echo -e "  ${GREEN}[OK]${NC} 프로젝트 스킬 제거"
-    fi
-
     # 프로젝트 커맨드 제거
     local proj_cmd_dir="$PROJECT_DIR/.claude/commands/rentre"
     if [ -d "$proj_cmd_dir" ]; then
         rm -rf "$proj_cmd_dir"
         echo -e "  ${GREEN}[OK]${NC} 프로젝트 커맨드 제거"
     fi
-
-    # _bmad 제거
-    [ -e "$PROJECT_DIR/_bmad" ] || [ -L "$PROJECT_DIR/_bmad" ] && rm -rf "$PROJECT_DIR/_bmad"
-    echo -e "  ${GREEN}[OK]${NC} _bmad 제거"
-
-    # 프로파일 제거
-    [ -f "$PROFILE_FILE" ] && rm -f "$PROFILE_FILE"
-    echo -e "  ${GREEN}[OK]${NC} 프로파일 제거"
 
     # 글로벌 커맨드 제거 여부
     echo ""
@@ -738,73 +335,25 @@ do_remove() {
     fi
 
     echo ""
+    echo -e "  ${DIM}superpowers 플러그인은 글로벌 공용이라 유지합니다.${NC}"
+    echo -e "  ${DIM}직접 제거하려면: claude plugin uninstall $SUPERPOWERS_PLUGIN${NC}"
+
+    echo ""
     echo -e "  ${GREEN}제거 완료${NC}"
     exit 0
-}
-
-# ─── 프리셋 처리 ─────────────────────────────────────
-
-get_preset_config() {
-    local preset="$1"
-    case "$preset" in
-        backend)
-            PRESET_FRAMEWORKS='["bmad-core"]'
-            PRESET_SUBCATS='["agents","planning","development","testing","architecture"]'
-            PRESET_CATEGORIES=(agents planning development testing architecture)
-            ;;
-        frontend)
-            PRESET_FRAMEWORKS='["bmad-core","fsd"]'
-            PRESET_SUBCATS='["agents","planning","development","architecture"]'
-            PRESET_CATEGORIES=(agents planning development architecture)
-            PRESET_EXTRA_FW=("fsd")
-            ;;
-        pm)
-            PRESET_FRAMEWORKS='["bmad-core"]'
-            PRESET_SUBCATS='["agents","planning","business","documentation"]'
-            PRESET_CATEGORIES=(agents planning business documentation)
-            ;;
-        gamedev)
-            PRESET_FRAMEWORKS='["gds"]'
-            PRESET_SUBCATS='[]'
-            PRESET_CATEGORIES=()
-            PRESET_EXTRA_FW=("gds")
-            ;;
-        full)
-            PRESET_FRAMEWORKS='["bmad-core","gds","wds","fsd"]'
-            PRESET_SUBCATS='["agents","planning","development","testing","architecture","business","documentation","quality","build_tools","utilities"]'
-            PRESET_CATEGORIES=(agents planning development testing architecture business documentation quality build_tools utilities)
-            PRESET_EXTRA_FW=("gds" "wds" "fsd")
-            ;;
-        *)
-            echo -e "${RED}[ERROR]${NC} 알 수 없는 프리셋: $preset"
-            echo "사용 가능: backend, frontend, pm, gamedev, full"
-            exit 1
-            ;;
-    esac
 }
 
 # ─── 메인 ─────────────────────────────────────────────
 
 main() {
-    local PRESET=""
     local GLOBAL_ONLY=false
     local WITH_GLOBAL=false
     local DO_REMOVE=false
     local AUTO_YES=false
-    LINK_MODE="${LINK_MODE:-symlink}"
 
     # 옵션 파싱
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --preset)
-                if [ -z "${2:-}" ]; then
-                    echo -e "${RED}[ERROR]${NC} --preset 뒤에 값이 필요합니다"
-                    echo "사용 가능: backend, frontend, pm, gamedev, full"
-                    exit 1
-                fi
-                PRESET="$2"
-                shift 2
-                ;;
             --yes|-y)
                 AUTO_YES=true
                 shift
@@ -820,6 +369,12 @@ main() {
             --remove)
                 DO_REMOVE=true
                 shift
+                ;;
+            --preset)
+                # v3.0부터 프리셋/프레임워크 선택 제거 (개발 스킬은 superpowers 글로벌 플러그인)
+                echo -e "${YELLOW}[!]${NC} --preset 은 v3.0부터 더 이상 사용되지 않습니다 (무시됨)."
+                # 값이 따라오면 함께 소비
+                if [ -n "${2:-}" ] && [[ "${2:-}" != --* ]]; then shift 2; else shift; fi
                 ;;
             *)
                 echo -e "${YELLOW}[!]${NC} 알 수 없는 옵션: $1 (무시됨)"
@@ -844,7 +399,7 @@ main() {
 
     # ─── 안전 검사 ───────────────────────────────
     # 홈 디렉토리 경고
-    if [ "$PROJECT_DIR" = "$HOME" ]; then
+    if [ "$PROJECT_DIR" = "$HOME" ] && [ "$GLOBAL_ONLY" = false ]; then
         echo -e "  ${YELLOW}⚠️  홈 디렉토리에 설치하면 글로벌처럼 동작합니다.${NC}"
         if [ "$AUTO_YES" = false ]; then
             echo -ne "  계속하시겠습니까? [y/N]: "
@@ -891,228 +446,38 @@ main() {
         esac
     fi
 
-    # BMAD submodule 확인
-    if [ ! -d "$BMAD_DIR" ] || [ ! -d "$BMAD_SKILLS_DIR" ]; then
-        echo -e "  ${YELLOW}[!]${NC} BMAD submodule이 초기화되지 않았습니다."
-        echo -e "  실행: ${CYAN}cd $REPO_DIR && git submodule update --init --recursive${NC}"
-        if [ "$GLOBAL_ONLY" = false ]; then
-            if [ "$AUTO_YES" = true ]; then
-                echo -e "  ${YELLOW}[!]${NC} --yes 모드: 글로벌 커맨드만 설치합니다."
-                GLOBAL_ONLY=true
-            else
-                echo -ne "  글로벌 커맨드만 설치하시겠습니까? [Y/n]: "
-                read -r fallback
-                if [[ "$fallback" =~ ^[nN]$ ]]; then
-                    exit 1
-                fi
-                GLOBAL_ONLY=true
-            fi
-        fi
-    fi
-
-    # MCP 감지
+    # MCP 감지 & 표시
     detect_mcp
+    echo ""
+    print_mcp_status
 
-    # ─── Step 1: 커맨드 설치 ────────────────────
+    # ─── Step 1: superpowers 플러그인 (글로벌, 멱등) ──
+    echo -e "  ${CYAN}${BOLD}[1] 개발 스킬 — superpowers 플러그인 설치${NC}"
+    install_superpowers
+    echo ""
+
+    # ─── 글로벌 전용 모드 ───────────────────────────
     if [ "$GLOBAL_ONLY" = true ]; then
-        echo -e "  ${CYAN}${BOLD}[1/1] 글로벌 커맨드 설치${NC}"
+        echo -e "  ${CYAN}${BOLD}[2] 글로벌 커맨드 설치${NC}"
         install_global_commands
+        verify_installation
         echo ""
-        echo -e "  ${GREEN}글로벌 커맨드 설치 완료${NC}"
+        echo -e "  ${GREEN}글로벌 부트스트랩 완료${NC}"
         echo ""
         echo "  시작하기: /rentre:help"
         exit 0
     fi
 
+    # ─── Step 2: 글로벌 커맨드 (--with-global 시) ────
     if [ "$WITH_GLOBAL" = true ]; then
-        echo -e "  ${CYAN}${BOLD}[0/3] 글로벌 커맨드 설치${NC}"
+        echo -e "  ${CYAN}${BOLD}[2] 글로벌 커맨드 설치${NC}"
         install_global_commands
         echo ""
     fi
 
-    # ─── Step 2: 프로젝트 스킬 설치 ──────────────
-    echo -e "  ${CYAN}${BOLD}[2/3] 프로젝트 스킬 설치${NC}"
-
-    local -a selected_skills=()
-    local frameworks_json='[]'
-    local subcategories_json='[]'
-    local -a selected_frameworks=()
-    local -a selected_subcats=()
-
-    # 이전 프로파일 확인
-    local use_previous=false
-    if [ -z "$PRESET" ] && [ -f "$PROFILE_FILE" ]; then
-        if load_profile; then
-            use_previous=true
-        fi
-    fi
-
-    if [ "$use_previous" = true ]; then
-        cleanup_existing_skills
-        if reinstall_from_profile; then
-            # 프로파일에서 JSON 값 읽기
-            if command -v jq &>/dev/null; then
-                frameworks_json=$(jq -c '.frameworks' "$PROFILE_FILE" 2>/dev/null || echo '[]')
-                subcategories_json=$(jq -c '.bmad_subcategories' "$PROFILE_FILE" 2>/dev/null || echo '[]')
-            fi
-        else
-            use_previous=false
-        fi
-    fi
-
-    if [ "$use_previous" = false ]; then
-        cleanup_existing_skills
-
-        if [ -n "$PRESET" ]; then
-            # ─── 프리셋 모드 ─────────────────
-            echo -e "  프리셋: ${GREEN}${PRESET}${NC}"
-            get_preset_config "$PRESET"
-
-            for cat in "${PRESET_CATEGORIES[@]+"${PRESET_CATEGORIES[@]}"}"; do
-                add_bmad_subcategory_skills selected_skills "$cat"
-            done
-
-            # 추가 프레임워크
-            for fw in "${PRESET_EXTRA_FW[@]+"${PRESET_EXTRA_FW[@]}"}"; do
-                case "$fw" in
-                    gds)
-                        while IFS= read -r s; do
-                            [ -n "$s" ] && collect_skills selected_skills "$s"
-                        done < <(for d in "$BMAD_SKILLS_DIR"/gds-*; do [ -d "$d" ] && echo "${d##*/}"; done)
-                        ;;
-                    wds)
-                        while IFS= read -r s; do
-                            [ -n "$s" ] && collect_skills selected_skills "$s"
-                        done < <(for d in "$BMAD_SKILLS_DIR"/wds*; do [ -d "$d" ] && echo "${d##*/}"; done)
-                        ;;
-                    fsd)
-                        collect_skills selected_skills "applying-fsd-architecture"
-                        ;;
-                esac
-            done
-
-            frameworks_json="$PRESET_FRAMEWORKS"
-            subcategories_json="$PRESET_SUBCATS"
-
-        else
-            # ─── 대화형 메뉴 ─────────────────
-            show_framework_menu
-            read -r fw_input
-            if [ -z "$fw_input" ]; then
-                echo -e "  ${YELLOW}[!]${NC} 선택이 필요합니다. 다시 시도해주세요."
-                echo ""
-                show_framework_menu
-                read -r fw_input
-            fi
-
-            local -a fw_selections
-            IFS=' ' read -ra fw_selections <<< "$(parse_selections "$fw_input")"
-
-            for sel in "${fw_selections[@]}"; do
-                case "$sel" in
-                    1|bmad)
-                        selected_frameworks+=("bmad-core")
-                        # BMAD 서브카테고리 메뉴
-                        show_bmad_subcategory_menu
-                        read -r sub_input
-
-                        local -a sub_selections
-                        IFS=' ' read -ra sub_selections <<< "$(parse_selections "$sub_input")"
-
-                        for sub in "${sub_selections[@]}"; do
-                            case "$sub" in
-                                1) selected_subcats+=("agents");       add_bmad_subcategory_skills selected_skills "agents" ;;
-                                2) selected_subcats+=("planning");     add_bmad_subcategory_skills selected_skills "planning" ;;
-                                3) selected_subcats+=("development");  add_bmad_subcategory_skills selected_skills "development" ;;
-                                4) selected_subcats+=("testing");      add_bmad_subcategory_skills selected_skills "testing" ;;
-                                5) selected_subcats+=("architecture"); add_bmad_subcategory_skills selected_skills "architecture" ;;
-                                6) selected_subcats+=("business");     add_bmad_subcategory_skills selected_skills "business" ;;
-                                7) selected_subcats+=("documentation"); add_bmad_subcategory_skills selected_skills "documentation" ;;
-                                8) selected_subcats+=("quality");      add_bmad_subcategory_skills selected_skills "quality" ;;
-                                9) selected_subcats+=("build_tools");  add_bmad_subcategory_skills selected_skills "build_tools" ;;
-                                0) selected_subcats+=("utilities");    add_bmad_subcategory_skills selected_skills "utilities" ;;
-                                [aA])
-                                    selected_subcats=("agents" "planning" "development" "testing" "architecture" "business" "documentation" "quality" "build_tools" "utilities")
-                                    for cat in "${selected_subcats[@]}"; do
-                                        add_bmad_subcategory_skills selected_skills "$cat"
-                                    done
-                                    ;;
-                            esac
-                        done
-                        ;;
-                    2|gds)
-                        selected_frameworks+=("gds")
-                        while IFS= read -r s; do
-                            [ -n "$s" ] && collect_skills selected_skills "$s"
-                        done < <(for d in "$BMAD_SKILLS_DIR"/gds-*; do [ -d "$d" ] && echo "${d##*/}"; done)
-                        ;;
-                    3|wds)
-                        selected_frameworks+=("wds")
-                        while IFS= read -r s; do
-                            [ -n "$s" ] && collect_skills selected_skills "$s"
-                        done < <(for d in "$BMAD_SKILLS_DIR"/wds*; do [ -d "$d" ] && echo "${d##*/}"; done)
-                        ;;
-                    4|fsd)
-                        selected_frameworks+=("fsd")
-                        collect_skills selected_skills "applying-fsd-architecture"
-                        ;;
-                    [aA])
-                        selected_frameworks=("bmad-core" "gds" "wds" "fsd")
-                        selected_subcats=("agents" "planning" "development" "testing" "architecture" "business" "documentation" "quality" "build_tools" "utilities")
-                        for cat in "${selected_subcats[@]}"; do
-                            add_bmad_subcategory_skills selected_skills "$cat"
-                        done
-                        while IFS= read -r s; do
-                            [ -n "$s" ] && collect_skills selected_skills "$s"
-                        done < <(for d in "$BMAD_SKILLS_DIR"/gds-*; do [ -d "$d" ] && echo "${d##*/}"; done)
-                        while IFS= read -r s; do
-                            [ -n "$s" ] && collect_skills selected_skills "$s"
-                        done < <(for d in "$BMAD_SKILLS_DIR"/wds*; do [ -d "$d" ] && echo "${d##*/}"; done)
-                        collect_skills selected_skills "applying-fsd-architecture"
-                        ;;
-                esac
-            done
-
-            # JSON 배열 빌드
-            frameworks_json="["
-            local first=true
-            for fw in "${selected_frameworks[@]+"${selected_frameworks[@]}"}"; do
-                if [ "$first" = true ]; then first=false; else frameworks_json+=","; fi
-                frameworks_json+="\"$fw\""
-            done
-            frameworks_json+="]"
-
-            subcategories_json="["
-            first=true
-            for sc in "${selected_subcats[@]+"${selected_subcats[@]}"}"; do
-                if [ "$first" = true ]; then first=false; else subcategories_json+=","; fi
-                subcategories_json+="\"$sc\""
-            done
-            subcategories_json+="]"
-        fi
-
-        # 스킬 설치
-        if [ ${#selected_skills[@]} -gt 0 ]; then
-            install_skills "${selected_skills[@]}"
-        else
-            echo -e "  ${YELLOW}[!]${NC} 선택된 스킬이 없습니다."
-        fi
-    fi
-
-    # _bmad 설정
-    install_bmad_config
-    echo ""
-
-    # ─── Step 3: 프로젝트 커맨드 + 마무리 ────────
-    echo -e "  ${CYAN}${BOLD}[3/3] 프로젝트 커맨드 + 프로파일 저장${NC}"
+    # ─── Step 3: 프로젝트 커맨드 ─────────────────────
+    echo -e "  ${CYAN}${BOLD}[3] 프로젝트 커맨드 설치${NC}"
     install_project_commands
-
-    # 스킬 수 계산
-    local final_skill_count
-    final_skill_count=$(ls -d "$PROJECT_DIR/.claude/skills"/* 2>/dev/null | wc -l | tr -d ' ')
-
-    # 프로파일 저장
-    save_profile "$frameworks_json" "$subcategories_json" "$final_skill_count"
 
     # ─── 설치 검증 ───────────────────────────────
     verify_installation
@@ -1134,10 +499,10 @@ main() {
         fi
     fi
 
-    echo -e "  Rentre Agents ${GREEN}v${version}${NC} 설치 완료 (${final_skill_count}개 스킬)"
+    echo -e "  Rentre Agents ${GREEN}v${version}${NC} 설치 완료"
     echo ""
-    echo -e "  시작하기:    ${CYAN}/rentre:help${NC}"
-    echo -e "  BMAD 가이드: ${CYAN}/bmad-help${NC}"
+    echo -e "  시작하기:           ${CYAN}/rentre:help${NC}"
+    echo -e "  superpowers 활성화: ${CYAN}/reload-plugins${NC} (또는 Claude 재시작)"
     echo ""
 
     # ─── SessionStart hook: 업데이트 체크 등록 ────
