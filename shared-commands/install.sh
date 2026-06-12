@@ -312,6 +312,37 @@ verify_installation() {
     fi
 }
 
+# ─── 레거시 BMAD 잔재 정리 (v2 → v3 마이그레이션) ──────
+# v2에서 생성된 BMAD/GDS/WDS/FSD 스킬 심링크, _bmad, bmad-profile.json은
+# v3에서 더 이상 쓰지 않으며 서브모듈 제거로 깨진 링크가 된다. 자동 정리한다.
+
+cleanup_legacy_bmad() {
+    local removed=0
+    local skills_dir="$PROJECT_DIR/.claude/skills"
+
+    if [ -d "$skills_dir" ]; then
+        shopt -s nullglob
+        for pattern in 'bmad-*' 'gds-*' 'wds*' 'applying-fsd-architecture'; do
+            for item in "$skills_dir"/$pattern; do
+                rm -rf "$item"
+                removed=$((removed + 1))
+            done
+        done
+        shopt -u nullglob
+    fi
+
+    for legacy in "$PROJECT_DIR/_bmad" "$PROJECT_DIR/_bmad-output" "$PROJECT_DIR/.claude/bmad-profile.json"; do
+        if [ -e "$legacy" ] || [ -L "$legacy" ]; then
+            rm -rf "$legacy"
+            removed=$((removed + 1))
+        fi
+    done
+
+    if [ "$removed" -gt 0 ]; then
+        echo -e "  ${DIM}레거시 BMAD 잔재 ${removed}개 정리 (v2→v3 마이그레이션)${NC}"
+    fi
+}
+
 # ─── 제거 ─────────────────────────────────────────────
 
 do_remove() {
@@ -324,6 +355,9 @@ do_remove() {
         rm -rf "$proj_cmd_dir"
         echo -e "  ${GREEN}[OK]${NC} 프로젝트 커맨드 제거"
     fi
+
+    # 레거시 BMAD 잔재 정리
+    cleanup_legacy_bmad
 
     # 글로벌 커맨드 제거 여부
     echo ""
@@ -467,6 +501,9 @@ main() {
         echo "  시작하기: /rentre:help"
         exit 0
     fi
+
+    # ─── 레거시 BMAD 잔재 정리 (v2 → v3) ───────────
+    cleanup_legacy_bmad
 
     # ─── Step 2: 글로벌 커맨드 (--with-global 시) ────
     if [ "$WITH_GLOBAL" = true ]; then
